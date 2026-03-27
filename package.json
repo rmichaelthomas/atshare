@@ -1,0 +1,20 @@
+{
+  "name": "@atshare/selector",
+  "version": "0.1.0",
+  "description": "Universal open social share selector for AT Protocol and ActivityPub networks",
+  "type": "module",
+  "main": "src/atshare-selector.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@atproto/oauth-client-browser": "^0.3.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "keywords": ["atprotocol", "activitypub", "share", "web-component", "bluesky", "mastodon"],
+  "license": "MIT"
+}
