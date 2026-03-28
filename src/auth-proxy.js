@@ -134,72 +134,66 @@ export function signIn(handle) {
 
     _currentPopup = popup;
 
-    // Listen for the auth-complete or auth-error postMessage from the popup
-    function onAuthMessage(event) {
-      if (event.origin !== ATSHARE_ORIGIN) return;
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
-
-      if (data.type === 'atshare-auth-complete') {
-        cleanup();
-        _did = data.did;
-        resolve({ sub: data.did });
-      } else if (data.type === 'atshare-auth-error') {
-        cleanup();
-        reject(new Error(data.error || 'Authentication failed'));
+    // Poll the auth-frame for a session appearing in IndexedDB.
+    // We cannot rely on popup.closed (Safari/Brave return true when
+    // the popup navigates cross-origin to the PDS auth page) or on
+    // postMessage/BroadcastChannel notifications. Instead, we simply
+    // check every 2 seconds whether the OAuth flow has completed and
+    // a session has been stored.
+    const sessionPoll = setInterval(async () => {
+      if (settled) return;
+      try {
+        await _ensureFrame();
+        const result = await _postToFrame({ type: 'restoreSession' });
+        if (result && result.sub) {
+          cleanup();
+          _did = result.sub;
+          resolve({ sub: result.sub });
+        }
+      } catch {
+        // iframe not ready yet or request failed — keep polling
       }
-    }
+    }, 2000);
 
-    // Poll for popup being closed. When closed, check the auth-frame for
-    // a session — the callback page stores it in IndexedDB before closing.
-    // This is more reliable than postMessage/BroadcastChannel notifications,
-    // which can be lost when the popup window closes.
-    const pollInterval = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(pollInterval);
-        // Give a brief moment for any in-flight messages, then check session
-        setTimeout(async () => {
-          if (settled) return; // message handler already resolved
-          try {
-            await _ensureFrame();
-            const result = await _postToFrame({ type: 'restoreSession' });
-            if (result && result.sub) {
-              cleanup();
-              _did = result.sub;
-              resolve({ sub: result.sub });
-            } else {
-              cleanup();
-              reject(new Error('Sign-in cancelled: popup was closed'));
-            }
-          } catch {
-            cleanup();
-            reject(new Error('Sign-in cancelled: popup was closed'));
-          }
-        }, 300);
+    // Safety timeout: reject after 2 minutes if no session appears
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        cleanup();
+        reject(new Error('Sign-in timed out'));
       }
-    }, 500);
+    }, 120000);
 
     let settled = false;
     function cleanup() {
-      if (settled) return; // idempotent — prevent double resolve/reject
+      if (settled) return;
       settled = true;
-      clearInterval(pollInterval);
-      window.removeEventListener('message', onAuthMessage);
+      clearInterval(sessionPoll);
+      clearTimeout(timeout);
       if (_currentPopup === popup) {
         _currentPopup = null;
+        _cancelReject = null;
       }
     }
 
-    window.addEventListener('message', onAuthMessage);
+    // Store reject so cancelSignIn() can trigger it
+    _cancelReject = () => {
+      cleanup();
+      reject(new Error('Sign-in cancelled'));
+    };
   });
 }
 
+// Stored reject callback for cancelSignIn
+let _cancelReject = null;
+
 /**
- * Close the current sign-in popup, causing the signIn() promise to reject.
+ * Cancel the current sign-in, causing the signIn() promise to reject.
  */
 export function cancelSignIn() {
-  if (_currentPopup && !_currentPopup.closed) {
-    _currentPopup.close();
+  try { _currentPopup?.close(); } catch {}
+  if (_cancelReject) {
+    _cancelReject();
+    _cancelReject = null;
   }
 }
 
@@ -266,6 +260,7 @@ export async function putPreference(did, preference) {
 export function _resetForTesting() {
   _did = null;
   _currentPopup = null;
+  _cancelReject = null;
   _frameReady = null;
   _frameReadyResolve = null;
   _frame = null;
