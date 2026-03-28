@@ -189,7 +189,12 @@ class AtshareSelector extends HTMLElement {
       if (e.key === 'Enter') this._onMastodonGo();
     });
 
-    document.addEventListener('click', () => this._closePopover(), { passive: true });
+    document.addEventListener('click', (e) => {
+      // composedPath() pierces Shadow DOM — only close if click was outside this element
+      if (!e.composedPath().includes(this)) {
+        this._closePopover();
+      }
+    }, { passive: true });
   }
 
   connectedCallback() {
