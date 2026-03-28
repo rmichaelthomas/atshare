@@ -150,18 +150,32 @@ export function signIn(handle) {
       }
     }
 
-    // Poll for popup being closed by the user.
-    // When popup.closed is detected, wait a grace period before rejecting —
-    // the callback page sends postMessage right before window.close(), and
-    // the message event may still be in the event queue when we detect closure.
+    // Poll for popup being closed. When closed, check the auth-frame for
+    // a session — the callback page stores it in IndexedDB before closing.
+    // This is more reliable than postMessage/BroadcastChannel notifications,
+    // which can be lost when the popup window closes.
     const pollInterval = setInterval(() => {
       if (popup.closed) {
         clearInterval(pollInterval);
-        setTimeout(() => {
-          // If the message handler already resolved/rejected, cleanup is a no-op
-          cleanup();
-          reject(new Error('Sign-in cancelled: popup was closed'));
-        }, 500);
+        // Give a brief moment for any in-flight messages, then check session
+        setTimeout(async () => {
+          if (settled) return; // message handler already resolved
+          try {
+            await _ensureFrame();
+            const result = await _postToFrame({ type: 'restoreSession' });
+            if (result && result.sub) {
+              cleanup();
+              _did = result.sub;
+              resolve({ sub: result.sub });
+            } else {
+              cleanup();
+              reject(new Error('Sign-in cancelled: popup was closed'));
+            }
+          } catch {
+            cleanup();
+            reject(new Error('Sign-in cancelled: popup was closed'));
+          }
+        }, 300);
       }
     }, 500);
 

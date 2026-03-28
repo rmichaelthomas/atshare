@@ -402,32 +402,56 @@ describe('signIn', () => {
     await expect(signIn('rob.bsky.social')).rejects.toThrow('Popup was blocked');
   });
 
-  it('rejects when popup is closed by the user (polling + grace period)', async () => {
+  it('resolves when popup closes and session is found in iframe', { timeout: 10000 }, async () => {
+    vi.useRealTimers(); // async setTimeout + _postToFrame is too complex for fake timers
+
+    // Set up iframe
+    _ensureFrame();
+    await new Promise((r) => setTimeout(r, 10));
+    simulateFrameMessage({ type: 'atshare-frame-ready' });
+    await new Promise((r) => setTimeout(r, 10));
+
     const promise = signIn('rob.bsky.social');
-
-    // Simulate user closing the popup
     mockPopup.closed = true;
-    vi.advanceTimersByTime(600); // past the 500ms poll interval (detects closure)
-    vi.advanceTimersByTime(600); // past the 500ms grace period (rejects)
 
-    await expect(promise).rejects.toThrow('Sign-in cancelled');
+    // Wait for poll (500ms) + grace (300ms) + buffer
+    await new Promise((r) => setTimeout(r, 1000));
+
+    // _postToFrame sent a restoreSession request — find its id and respond
+    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
+      c => c[0]?.type === 'restoreSession'
+    );
+    expect(call).toBeTruthy();
+    simulateFrameMessage({ id: call[0].id, result: { sub: 'did:plc:found' } });
+
+    const result = await promise;
+    expect(result).toEqual({ sub: 'did:plc:found' });
+
+    vi.useFakeTimers(); // restore for other tests
   });
 
-  it('does NOT reject during the grace period after popup close', async () => {
+  it('rejects when popup closes and no session found in iframe', { timeout: 10000 }, async () => {
+    vi.useRealTimers();
+
+    _ensureFrame();
+    await new Promise((r) => setTimeout(r, 10));
+    simulateFrameMessage({ type: 'atshare-frame-ready' });
+    await new Promise((r) => setTimeout(r, 10));
+
     const promise = signIn('rob.bsky.social');
     mockPopup.closed = true;
 
-    vi.advanceTimersByTime(600); // poll detects closure
-    vi.advanceTimersByTime(200); // inside 500ms grace period
+    await new Promise((r) => setTimeout(r, 1000));
 
-    let settled = false;
-    promise.then(() => { settled = true; }).catch(() => { settled = true; });
-    await Promise.resolve();
-    expect(settled).toBe(false);
+    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
+      c => c[0]?.type === 'restoreSession'
+    );
+    expect(call).toBeTruthy();
+    simulateFrameMessage({ id: call[0].id, result: null });
 
-    // Cleanup: advance past grace period
-    vi.advanceTimersByTime(400);
-    await promise.catch(() => {}); // absorb rejection
+    await expect(promise).rejects.toThrow('Sign-in cancelled');
+
+    vi.useFakeTimers();
   });
 
   it('ignores auth messages from wrong origin', async () => {
@@ -484,19 +508,32 @@ describe('cancelSignIn', () => {
     expect(mockPopup.close).not.toHaveBeenCalled();
   });
 
-  it('causes signIn promise to reject after poll detects closed popup', async () => {
+  it('causes signIn promise to reject after poll detects closed popup', { timeout: 10000 }, async () => {
+    vi.useRealTimers();
+
+    _ensureFrame();
+    await new Promise((r) => setTimeout(r, 10));
+    simulateFrameMessage({ type: 'atshare-frame-ready' });
+    await new Promise((r) => setTimeout(r, 10));
+
     const mockPopup = { closed: false, close: vi.fn() };
     vi.spyOn(window, 'open').mockReturnValue(mockPopup);
 
     const promise = signIn('rob.bsky.social');
     cancelSignIn();
-
-    // cancelSignIn called close(); simulate the popup actually closing
     mockPopup.closed = true;
-    vi.advanceTimersByTime(600); // poll detects closure
-    vi.advanceTimersByTime(600); // grace period passes
+
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
+      c => c[0]?.type === 'restoreSession'
+    );
+    expect(call).toBeTruthy();
+    simulateFrameMessage({ id: call[0].id, result: null });
 
     await expect(promise).rejects.toThrow('Sign-in cancelled');
+
+    vi.useFakeTimers();
   });
 });
 
