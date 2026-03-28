@@ -12,6 +12,8 @@
 
 import { NETWORKS, buildIntentUrl } from './networks.js';
 import { getPreference, putPreference } from './pds.js';
+import { signIn, restoreSession, signOut, getSession } from './auth.js';
+import { resolvePdsEndpoint } from './identity.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -297,6 +299,30 @@ class AtshareSelector extends HTMLElement {
     this._mastodonGoBtn = this.shadowRoot.querySelector('.mastodon-go-btn');
     this._labelText = this.shadowRoot.querySelector('.label-text');
 
+    // Sign-in zone elements
+    this._signinZone        = this.shadowRoot.querySelector('.signin-zone');
+    this._signinPrompt      = this.shadowRoot.querySelector('.signin-prompt');
+    this._signinHandleWrap  = this.shadowRoot.querySelector('.signin-handle-wrap');
+    this._signinHandleInput = this.shadowRoot.querySelector('.signin-handle-input');
+    this._signinError       = this.shadowRoot.querySelector('.signin-error');
+    this._signinContinueBtn = this.shadowRoot.querySelector('.signin-continue-btn');
+    this._signinWaiting     = this.shadowRoot.querySelector('.signin-waiting');
+    this._signinCancelBtn   = this.shadowRoot.querySelector('.signin-cancel-btn');
+    this._signinInfo        = this.shadowRoot.querySelector('.signin-info');
+    this._signinHandle      = this.shadowRoot.querySelector('.signin-handle');
+    this._signinSignoutBtn  = this.shadowRoot.querySelector('.signin-signout-btn');
+
+    this._signinAbortController = null; // used to cancel popup
+
+    // Event listeners for sign-in zone
+    this._signinPrompt.addEventListener('click', () => this._setSigninState('handle'));
+    this._signinContinueBtn.addEventListener('click', () => this._onSigninContinue());
+    this._signinHandleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this._onSigninContinue();
+    });
+    this._signinCancelBtn.addEventListener('click', () => this._onSigninCancel());
+    this._signinSignoutBtn.addEventListener('click', () => this._onSignOut());
+
     this._trigger.addEventListener('click', (e) => {
       e.stopPropagation();
       this._togglePopover();
@@ -317,6 +343,30 @@ class AtshareSelector extends HTMLElement {
 
   connectedCallback() {
     this._render();
+    this._tryRestoreSession();
+  }
+
+  async _tryRestoreSession() {
+    try {
+      const session = await restoreSession();
+      if (!session) return;
+
+      try {
+        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
+        const pref = await getPreference(pdsEndpoint, session.sub, session.fetchHandler);
+        if (pref) {
+          this._preference = pref;
+          this._renderNetworks();
+        }
+      } catch {
+        // Preference load failure is silent
+      }
+
+      // TODO: resolve DID to handle for display (see Known Limitations)
+      this._setSigninState('signedin', { handle: session.sub });
+    } catch {
+      // restoreSession failure is silent — show signed-out state (default)
+    }
   }
 
   attributeChangedCallback(name, _old, value) {
@@ -403,16 +453,28 @@ class AtshareSelector extends HTMLElement {
   }
 
   _persistPreference(networkId, opts) {
-    // TODO (Phase 1): write to PDS via putPreference() when AT Protocol OAuth is integrated
-    // For now, store in localStorage as a development fallback
+    const pref = {
+      primaryNetwork: networkId,
+      networks: this._buildNetworksArray(networkId, opts),
+    };
+
+    // Always write to localStorage as fallback
     try {
-      const pref = {
-        primaryNetwork: networkId,
-        networks: this._buildNetworksArray(networkId, opts),
-      };
       localStorage.setItem('atshare.preference', JSON.stringify(pref));
-    } catch (_) {
+    } catch {
       // localStorage unavailable — no-op
+    }
+
+    // Write to PDS if authenticated (fire-and-forget, don't await)
+    const session = getSession();
+    if (session) {
+      resolvePdsEndpoint(session.sub)
+        .then((pdsEndpoint) =>
+          putPreference(pdsEndpoint, session.sub, session.fetchHandler, pref)
+        )
+        .catch(() => {
+          // PDS write failure is silent — localStorage fallback already written
+        });
     }
   }
 
@@ -438,6 +500,83 @@ class AtshareSelector extends HTMLElement {
   _setMastodonInstance(instanceUrl) {
     // Pre-fill for next time
     this._mastodonInput.value = instanceUrl;
+  }
+
+  /**
+   * Switch the sign-in zone to one of: 'signedout' | 'handle' | 'waiting' | 'signedin'
+   * @param {'signedout'|'handle'|'waiting'|'signedin'} state
+   * @param {object} [opts]
+   * @param {string} [opts.handle] - display handle for 'signedin' state
+   * @param {string} [opts.errorMsg] - error message for 'handle' state
+   */
+  _setSigninState(state, opts = {}) {
+    this._signinZone.className = `signin-zone state-${state}`;
+
+    // Clear error on state transitions (unless explicitly setting one)
+    if (state !== 'handle' || !opts.errorMsg) {
+      this._signinError.textContent = '';
+      this._signinError.classList.remove('visible');
+      this._signinHandleInput.classList.remove('error');
+    }
+
+    if (state === 'handle' && opts.errorMsg) {
+      this._signinError.textContent = opts.errorMsg;
+      this._signinError.classList.add('visible');
+      this._signinHandleInput.classList.add('error');
+    }
+
+    if (state === 'signedin' && opts.handle) {
+      this._signinHandle.textContent = `✓ ${opts.handle}`;
+    }
+  }
+
+  async _onSigninContinue() {
+    const handle = this._signinHandleInput.value.trim();
+    if (!handle) return;
+
+    this._setSigninState('waiting');
+
+    this._signinAbortController = new AbortController();
+
+    try {
+      const session = await signIn(handle, this._signinAbortController.signal);
+      this._signinAbortController = null;
+
+      // Load preference from PDS (non-blocking; errors are silent)
+      try {
+        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
+        const pref = await getPreference(pdsEndpoint, session.sub, session.fetchHandler);
+        if (pref) {
+          this._preference = pref;
+          this._renderNetworks();
+        }
+      } catch {
+        // Preference load failure is silent — share still works
+      }
+
+      // TODO: resolve DID to handle for display (see Known Limitations)
+      this._setSigninState('signedin', { handle: session.sub });
+    } catch (err) {
+      this._signinAbortController = null;
+      const msg = err?.message?.includes('Abort') || err?.message?.includes('cancel')
+        ? 'Sign-in cancelled'
+        : 'Sign-in failed — try again';
+      this._setSigninState('handle', { errorMsg: msg });
+    }
+  }
+
+  _onSigninCancel() {
+    this._signinAbortController?.abort();
+    this._signinAbortController = null;
+    this._setSigninState('signedout');
+  }
+
+  async _onSignOut() {
+    await signOut();
+    this._preference = null;
+    this._renderNetworks();
+    this._setSigninState('signedout');
+    this._signinHandleInput.value = '';
   }
 }
 
