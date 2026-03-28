@@ -60,14 +60,20 @@ function makeClient(overrides = {}) {
 
 /**
  * Simulate the parent window sending a postMessage to the frame.
- * Returns a mock `source` object so we can assert on postMessage replies.
+ * Returns the mocked window.parent so we can assert on postMessage replies.
  */
 function sendMessage(data) {
-  const source = { postMessage: vi.fn() };
+  // Get or create a spy on window.parent's postMessage
+  let postMessageSpy = vi.spyOn(window.parent, 'postMessage');
+
+  // Clear any previous calls (e.g., from init())
+  postMessageSpy.mockClear();
+
   window.dispatchEvent(
-    new MessageEvent('message', { data, source })
+    new MessageEvent('message', { data, source: window.parent })
   );
-  return source;
+
+  return { postMessage: postMessageSpy };
 }
 
 // ---------------------------------------------------------------------------

@@ -45,6 +45,7 @@ async function _onMessage(event) {
   const data = event.data;
   if (!data || typeof data !== 'object') return;
   if (data.id == null) return;
+  if (event.source !== window.parent) return;
 
   const { id, type } = data;
   const source = event.source;
@@ -110,4 +111,6 @@ export function _resetForTesting() {
 
 // Auto-initialize when the module loads in a real browser context.
 // In tests, vi.mock controls BrowserOAuthClient.load and callers invoke init() directly.
-init();
+if (typeof window !== 'undefined' && window.parent !== window) {
+  init();
+}
