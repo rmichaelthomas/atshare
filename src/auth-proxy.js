@@ -116,14 +116,21 @@ export function _postToFrame(message) {
  * @returns {Promise<{sub: string}>}
  */
 export function signIn(handle) {
-  return new Promise((resolve, reject) => {
-    const url = `${ATSHARE_ORIGIN}/auth/?handle=${encodeURIComponent(handle)}`;
-    const popup = window.open(url, 'atshare-auth', 'width=600,height=700');
+  // Open popup SYNCHRONOUSLY in user gesture context to avoid popup blockers.
+  const url = `${ATSHARE_ORIGIN}/auth/?handle=${encodeURIComponent(handle)}`;
+  const popup = window.open(url, 'atshare-auth', 'width=600,height=700');
 
-    if (!popup) {
-      reject(new Error('Popup was blocked. Allow popups for this site and try again.'));
-      return;
-    }
+  if (!popup) {
+    return Promise.reject(new Error('Popup was blocked. Allow popups for this site and try again.'));
+  }
+
+  // Ensure the iframe is loaded so its BroadcastChannel relay is active
+  // before the callback page broadcasts the auth result. The iframe loads
+  // in <1s; the auth flow takes several seconds (user authorizes at PDS),
+  // so the relay will be ready in time.
+  _ensureFrame();
+
+  return new Promise((resolve, reject) => {
 
     _currentPopup = popup;
 
