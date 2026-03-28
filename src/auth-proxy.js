@@ -76,8 +76,9 @@ function _onMessage(event) {
 
   // iframe response to a postToFrame request (has an id)
   if (data.id != null && _pending.has(data.id)) {
-    const { resolve, reject } = _pending.get(data.id);
+    const { resolve, reject, timeout } = _pending.get(data.id);
     _pending.delete(data.id);
+    clearTimeout(timeout);
     if ('error' in data) {
       reject(new Error(data.error));
     } else {
@@ -96,7 +97,13 @@ function _onMessage(event) {
 export function _postToFrame(message) {
   return new Promise((resolve, reject) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    _pending.set(id, { resolve, reject });
+
+    const timeout = setTimeout(() => {
+      _pending.delete(id);
+      reject(new Error('Auth frame request timed out'));
+    }, 10000);
+
+    _pending.set(id, { resolve, reject, timeout });
     _frame.contentWindow.postMessage({ ...message, id }, ATSHARE_ORIGIN);
   });
 }
@@ -111,7 +118,7 @@ export function _postToFrame(message) {
 export function signIn(handle) {
   return new Promise((resolve, reject) => {
     const url = `${ATSHARE_ORIGIN}/auth/?handle=${encodeURIComponent(handle)}`;
-    const popup = window.open(url, 'atshare-auth', 'width=600,height=700,noopener');
+    const popup = window.open(url, 'atshare-auth', 'width=600,height=700');
 
     if (!popup) {
       reject(new Error('Popup was blocked. Allow popups for this site and try again.'));
@@ -231,4 +238,5 @@ export function _resetForTesting() {
   _frameReadyResolve = null;
   _frame = null;
   _pending.clear();
+  window.removeEventListener('message', _onMessage);
 }
