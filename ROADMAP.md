@@ -23,6 +23,20 @@ A lightweight backend on `atshare.social` would enable full read/write from any 
 
 The component would call `fetch('https://atshare.social/api/sign-in')` etc. -- standard CORS requests with no storage access issues.
 
+## Phase 2: atShare Badge
+
+An identity card component that displays a user's cross-network presence:
+
+- **atShare Badge** -- embeddable card showing a user's AT Protocol + ActivityPub identity
+- **Combined follower counts** across Bluesky, Mastodon, and other networks
+- **SVG badge endpoint** -- `atshare.social/badge/{handle}.svg` for use in READMEs, blogs, etc.
+
+## Distribution
+
+- **npm package** -- publish `@atshare/selector` to npm for `npm install` usage
+- **CDN** -- host the built component on a CDN (or atshare.social itself) for `<script>` tag embedding
+- **Landing page** -- atshare.social home page with docs, live demo, and integration guide
+
 ## Future Ideas
 
 - **More networks** -- Threads, Nostr, or other AT Protocol / ActivityPub services
