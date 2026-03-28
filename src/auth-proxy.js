@@ -164,9 +164,12 @@ export function signIn(handle) {
     const didPoll = setInterval(() => {
       if (settled) return;
       try {
-        popup.postMessage({ type: 'atshare-get-did' }, ATSHARE_ORIGIN);
+        // Use '*' because Safari may throw SecurityError when calling
+        // postMessage with a specific origin on a popup that navigated
+        // cross-origin. The message content is harmless (just a DID request).
+        popup.postMessage({ type: 'atshare-get-did' }, '*');
       } catch {
-        // popup on different origin or closed — keep trying
+        // popup reference invalidated — keep trying
       }
     }, 2000);
 
