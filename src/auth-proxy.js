@@ -13,6 +13,18 @@
 
 export const ATSHARE_ORIGIN = 'https://atshare.social';
 
+// If this page was loaded in a popup after OAuth callback redirect,
+// the DID is in the hash. Post it to the opener (same origin now)
+// and close the popup.
+if (typeof window !== 'undefined' && window.opener && window.location.hash.includes('atshare-did=')) {
+  const did = new URLSearchParams(window.location.hash.slice(1)).get('atshare-did');
+  if (did) {
+    window.opener.postMessage({ type: 'atshare-auth-complete', did }, '*');
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    window.close();
+  }
+}
+
 // Cached current DID for sync getSession() access
 let _did = null;
 
@@ -117,7 +129,10 @@ export function _postToFrame(message) {
  */
 export function signIn(handle) {
   // Open popup SYNCHRONOUSLY in user gesture context to avoid popup blockers.
-  const url = `${ATSHARE_ORIGIN}/auth/?handle=${encodeURIComponent(handle)}`;
+  // Pass the current page URL so the callback can redirect back here (same-origin)
+  // with the DID in the hash — avoiding all cross-origin communication issues.
+  const returnUrl = window.location.href.split('#')[0]; // strip existing hash
+  const url = `${ATSHARE_ORIGIN}/auth/?handle=${encodeURIComponent(handle)}&returnUrl=${encodeURIComponent(returnUrl)}`;
   const popup = window.open(url, 'atshare-auth', 'width=600,height=700');
 
   if (!popup) {
@@ -154,25 +169,6 @@ export function signIn(handle) {
     }
     window.addEventListener('message', onAuthMessage);
 
-    // Poll the popup by sending it postMessage requests every 2 seconds.
-    // While the popup is on a different origin (PDS auth page), the
-    // messages are silently dropped. When it returns to atshare.social
-    // (callback page), it receives the request and responds with the DID.
-    // This avoids relying on popup.closed (unreliable cross-origin),
-    // window.opener (stripped by some browsers), BroadcastChannel
-    // (partitioned), or third-party iframe storage (partitioned).
-    const didPoll = setInterval(() => {
-      if (settled) return;
-      try {
-        // Use '*' because Safari may throw SecurityError when calling
-        // postMessage with a specific origin on a popup that navigated
-        // cross-origin. The message content is harmless (just a DID request).
-        popup.postMessage({ type: 'atshare-get-did' }, '*');
-      } catch {
-        // popup reference invalidated — keep trying
-      }
-    }, 2000);
-
     // Safety timeout: reject after 2 minutes
     const timeout = setTimeout(() => {
       if (!settled) {
@@ -185,7 +181,6 @@ export function signIn(handle) {
     function cleanup() {
       if (settled) return;
       settled = true;
-      clearInterval(didPoll);
       clearTimeout(timeout);
       window.removeEventListener('message', onAuthMessage);
       if (_currentPopup === popup) {

@@ -365,7 +365,8 @@ describe('signIn', () => {
     signIn('rob.bsky.social');
     expect(openMock).toHaveBeenCalledOnce();
     const [url] = openMock.mock.calls[0];
-    expect(url).toBe(`${ATSHARE_ORIGIN}/auth/?handle=rob.bsky.social`);
+    expect(url).toContain(`${ATSHARE_ORIGIN}/auth/?handle=rob.bsky.social`);
+    expect(url).toContain('returnUrl=');
   });
 
   it('URL-encodes the handle', () => {

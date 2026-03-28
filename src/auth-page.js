@@ -29,6 +29,7 @@ const HANDLE_RESOLVER = 'https://bsky.social';
 export async function run() {
   const params = new URLSearchParams(window.location.search);
   const handle = params.get('handle');
+  const returnUrl = params.get('returnUrl');
 
   if (!handle) {
     postError('Missing handle parameter');
@@ -41,10 +42,11 @@ export async function run() {
       handleResolver: HANDLE_RESOLVER,
     });
 
-    // signIn without {display:'popup'} calls signInRedirect() internally,
-    // setting window.location.href to the PDS auth URL.
-    // Under normal flow the promise never resolves — the page navigates away.
-    await client.signIn(handle);
+    // Pass returnUrl as the OAuth state — it persists through the redirect
+    // flow and is available in the callback via result.state.
+    // signIn without {display:'popup'} calls signInRedirect() internally.
+    const signInOpts = returnUrl ? { state: returnUrl } : undefined;
+    await client.signIn(handle, signInOpts);
   } catch (err) {
     postError(err.message || String(err));
   }

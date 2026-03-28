@@ -92,9 +92,10 @@ describe('run — normal sign-in flow', () => {
     await run();
 
     expect(mockClient.signIn).toHaveBeenCalledOnce();
-    expect(mockClient.signIn).toHaveBeenCalledWith('rob.bsky.social');
-    // Must NOT pass any second argument — no {display:'popup'}
-    expect(mockClient.signIn.mock.calls[0].length).toBe(1);
+    expect(mockClient.signIn.mock.calls[0][0]).toBe('rob.bsky.social');
+    // Must NOT pass {display:'popup'} — undefined or {state} only
+    const opts = mockClient.signIn.mock.calls[0][1];
+    expect(opts?.display).toBeUndefined();
   });
 
   it('URL-decodes the handle from the query string', async () => {
@@ -104,7 +105,7 @@ describe('run — normal sign-in flow', () => {
 
     await run();
 
-    expect(mockClient.signIn).toHaveBeenCalledWith('user@example.social');
+    expect(mockClient.signIn.mock.calls[0][0]).toBe('user@example.social');
   });
 });
 
