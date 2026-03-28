@@ -133,6 +133,104 @@ TEMPLATE.innerHTML = `
     .footer a:hover {
       color: #64748b;
     }
+
+    /* --- Sign-in zone --- */
+    .signin-zone {
+      padding: 6px 10px;
+    }
+
+    /* State: signed-out — single "Sign in to save preference" link */
+    .signin-prompt {
+      display: none;
+      font-size: 12px;
+      color: #94a3b8;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .signin-prompt:hover { color: #64748b; }
+
+    /* State: handle-input */
+    .signin-handle-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .signin-handle-wrap label {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .signin-handle-wrap input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--atshare-border, #e2e8f0);
+      border-radius: 4px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    .signin-handle-wrap input.error { border-color: #ef4444; }
+    .signin-handle-wrap .signin-error {
+      font-size: 11px;
+      color: #ef4444;
+      display: none;
+    }
+    .signin-handle-wrap .signin-error.visible { display: block; }
+    .signin-handle-wrap .signin-continue-btn {
+      align-self: flex-end;
+      padding: 5px 12px;
+      border: none;
+      border-radius: 4px;
+      background: var(--atshare-accent, #1d4ed8);
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* State: waiting (popup open) */
+    .signin-waiting {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .signin-waiting .signin-cancel-btn {
+      font-size: 12px;
+      color: #94a3b8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .signin-waiting .signin-cancel-btn:hover { color: #64748b; }
+
+    /* State: signed-in */
+    .signin-info {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #475569;
+    }
+    .signin-info .signin-handle { font-weight: 500; }
+    .signin-info .signin-signout-btn {
+      font-size: 11px;
+      color: #94a3b8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .signin-info .signin-signout-btn:hover { color: #64748b; }
+
+    /* Visibility helpers — applied to parent .signin-zone */
+    .signin-zone.state-signedout  .signin-prompt      { display: block; }
+    .signin-zone.state-handle     .signin-handle-wrap { display: flex; }
+    .signin-zone.state-waiting    .signin-waiting      { display: flex; }
+    .signin-zone.state-signedin   .signin-info         { display: flex; }
   </style>
 
   <div style="position: relative; display: inline-block;">
@@ -150,6 +248,26 @@ TEMPLATE.innerHTML = `
         <label>Your Mastodon instance</label>
         <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input">
         <button class="mastodon-go-btn">Share</button>
+      </div>
+      <div class="signin-zone state-signedout">
+        <button class="signin-prompt">Sign in to save preference</button>
+
+        <div class="signin-handle-wrap">
+          <label>Your AT Protocol handle</label>
+          <input type="text" class="signin-handle-input" placeholder="rob.bsky.social" autocomplete="username" spellcheck="false">
+          <span class="signin-error"></span>
+          <button class="signin-continue-btn">Continue</button>
+        </div>
+
+        <div class="signin-waiting">
+          <span>Opening sign-in…</span>
+          <button class="signin-cancel-btn">Cancel</button>
+        </div>
+
+        <div class="signin-info">
+          <span class="signin-handle"></span>
+          <button class="signin-signout-btn">Sign out</button>
+        </div>
       </div>
       <div class="divider"></div>
       <div class="footer"><a href="https://atshare.social" target="_blank" rel="noopener">atShare</a></div>
