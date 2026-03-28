@@ -17,6 +17,7 @@
     "@atproto/oauth-client-browser": "^0.3.0"
   },
   "devDependencies": {
+    "happy-dom": "^20.8.9",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
   },
