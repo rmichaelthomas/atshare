@@ -68,8 +68,21 @@ async function _onMessage(event) {
 
     switch (type) {
       case 'restoreSession': {
-        const initResult = await _client.init();
-        result = initResult?.session ? { sub: initResult.session.sub } : null;
+        // Read the last-authenticated DID from localStorage (written by the
+        // callback page after a successful OAuth exchange) and restore the
+        // full session from IndexedDB. Using restore(sub) directly instead
+        // of client.init() avoids re-running init logic on repeated calls.
+        const sub = localStorage.getItem('@@atproto/oauth-client-browser(sub)');
+        if (sub) {
+          try {
+            const session = await _client.restore(sub);
+            result = { sub: session.sub };
+          } catch {
+            result = null;
+          }
+        } else {
+          result = null;
+        }
         break;
       }
 

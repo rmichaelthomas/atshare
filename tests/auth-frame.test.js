@@ -123,27 +123,30 @@ describe('init', () => {
 // ---------------------------------------------------------------------------
 
 describe('restoreSession', () => {
-  it('returns {sub: did} when a session exists', async () => {
+  it('returns {sub: did} when a session exists in localStorage', async () => {
     const session = makeSession(TEST_DID);
-    BrowserOAuthClient.load.mockResolvedValue(
-      makeClient({ init: vi.fn().mockResolvedValue({ session }) })
-    );
+    const mockClient = makeClient({ restore: vi.fn().mockResolvedValue(session) });
+    BrowserOAuthClient.load.mockResolvedValue(mockClient);
     await init();
+
+    // Simulate the callback page having stored the sub in localStorage
+    localStorage.setItem('@@atproto/oauth-client-browser(sub)', TEST_DID);
 
     const source = sendMessage({ id: 'req-1', type: 'restoreSession' });
     await Promise.resolve(); // flush microtasks
 
+    expect(mockClient.restore).toHaveBeenCalledWith(TEST_DID);
     expect(source.postMessage).toHaveBeenCalledWith(
       { id: 'req-1', result: { sub: TEST_DID } },
       '*'
     );
   });
 
-  it('returns null when no session exists', async () => {
-    BrowserOAuthClient.load.mockResolvedValue(
-      makeClient({ init: vi.fn().mockResolvedValue(undefined) })
-    );
+  it('returns null when no sub in localStorage', async () => {
+    BrowserOAuthClient.load.mockResolvedValue(makeClient());
     await init();
+
+    localStorage.removeItem('@@atproto/oauth-client-browser(sub)');
 
     const source = sendMessage({ id: 'req-2', type: 'restoreSession' });
     await Promise.resolve();
@@ -154,33 +157,21 @@ describe('restoreSession', () => {
     );
   });
 
-  it('returns null when init() returns object without session', async () => {
-    BrowserOAuthClient.load.mockResolvedValue(
-      makeClient({ init: vi.fn().mockResolvedValue({}) })
-    );
+  it('returns null when client.restore() throws', async () => {
+    const mockClient = makeClient({
+      restore: vi.fn().mockRejectedValue(new Error('Session expired')),
+    });
+    BrowserOAuthClient.load.mockResolvedValue(mockClient);
     await init();
+
+    localStorage.setItem('@@atproto/oauth-client-browser(sub)', TEST_DID);
 
     const source = sendMessage({ id: 'req-3', type: 'restoreSession' });
     await Promise.resolve();
+    await Promise.resolve(); // flush rejection
 
     expect(source.postMessage).toHaveBeenCalledWith(
       { id: 'req-3', result: null },
-      '*'
-    );
-  });
-
-  it('returns an error response when client.init() throws', async () => {
-    BrowserOAuthClient.load.mockResolvedValue(
-      makeClient({ init: vi.fn().mockRejectedValue(new Error('IndexedDB unavailable')) })
-    );
-    await init();
-
-    const source = sendMessage({ id: 'req-4', type: 'restoreSession' });
-    await Promise.resolve();
-    await Promise.resolve(); // additional flush for rejection
-
-    expect(source.postMessage).toHaveBeenCalledWith(
-      { id: 'req-4', error: 'IndexedDB unavailable' },
       '*'
     );
   });
