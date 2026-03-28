@@ -134,28 +134,43 @@ export function signIn(handle) {
 
     _currentPopup = popup;
 
-    // Poll the auth-frame for a session appearing in IndexedDB.
-    // We cannot rely on popup.closed (Safari/Brave return true when
-    // the popup navigates cross-origin to the PDS auth page) or on
-    // postMessage/BroadcastChannel notifications. Instead, we simply
-    // check every 2 seconds whether the OAuth flow has completed and
-    // a session has been stored.
-    const sessionPoll = setInterval(async () => {
+    // Listen for the auth-complete response from the popup.
+    // The callback page waits for us to ask for the DID, then responds.
+    function onAuthMessage(event) {
+      if (event.origin !== ATSHARE_ORIGIN) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'atshare-auth-complete' && data.did) {
+        cleanup();
+        _did = data.did;
+        resolve({ sub: data.did });
+        // Tell the popup it can close now
+        try { popup.postMessage({ type: 'atshare-close' }, ATSHARE_ORIGIN); } catch {}
+      } else if (data.type === 'atshare-auth-error') {
+        cleanup();
+        reject(new Error(data.error || 'Authentication failed'));
+      }
+    }
+    window.addEventListener('message', onAuthMessage);
+
+    // Poll the popup by sending it postMessage requests every 2 seconds.
+    // While the popup is on a different origin (PDS auth page), the
+    // messages are silently dropped. When it returns to atshare.social
+    // (callback page), it receives the request and responds with the DID.
+    // This avoids relying on popup.closed (unreliable cross-origin),
+    // window.opener (stripped by some browsers), BroadcastChannel
+    // (partitioned), or third-party iframe storage (partitioned).
+    const didPoll = setInterval(() => {
       if (settled) return;
       try {
-        await _ensureFrame();
-        const result = await _postToFrame({ type: 'restoreSession' });
-        if (result && result.sub) {
-          cleanup();
-          _did = result.sub;
-          resolve({ sub: result.sub });
-        }
+        popup.postMessage({ type: 'atshare-get-did' }, ATSHARE_ORIGIN);
       } catch {
-        // iframe not ready yet or request failed — keep polling
+        // popup on different origin or closed — keep trying
       }
     }, 2000);
 
-    // Safety timeout: reject after 2 minutes if no session appears
+    // Safety timeout: reject after 2 minutes
     const timeout = setTimeout(() => {
       if (!settled) {
         cleanup();
@@ -167,8 +182,9 @@ export function signIn(handle) {
     function cleanup() {
       if (settled) return;
       settled = true;
-      clearInterval(sessionPoll);
+      clearInterval(didPoll);
       clearTimeout(timeout);
+      window.removeEventListener('message', onAuthMessage);
       if (_currentPopup === popup) {
         _currentPopup = null;
         _cancelReject = null;

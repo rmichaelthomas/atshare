@@ -379,57 +379,23 @@ describe('signIn', () => {
     await expect(signIn('rob.bsky.social')).rejects.toThrow('Popup was blocked');
   });
 
-  it('resolves when session appears in iframe (polling)', { timeout: 10000 }, async () => {
-    vi.useRealTimers();
-
-    // Set up iframe
-    _ensureFrame();
-    await new Promise((r) => setTimeout(r, 10));
-    simulateFrameMessage({ type: 'atshare-frame-ready' });
-    await new Promise((r) => setTimeout(r, 10));
-
+  it('resolves when callback page responds with DID via postMessage', async () => {
     const promise = signIn('rob.bsky.social');
 
-    // Wait for the 2-second session poll to fire
-    await new Promise((r) => setTimeout(r, 2500));
-
-    // The poll sent a restoreSession request — find its id and respond with a session
-    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
-      c => c[0]?.type === 'restoreSession'
-    );
-    expect(call).toBeTruthy();
-    simulateFrameMessage({ id: call[0].id, result: { sub: 'did:plc:found' } });
+    // Simulate the callback page responding to our poll with the DID
+    simulateFrameMessage({ type: 'atshare-auth-complete', did: 'did:plc:found' });
 
     const result = await promise;
     expect(result).toEqual({ sub: 'did:plc:found' });
-
-    vi.useFakeTimers();
   });
 
-  it('updates getSession() after successful sign-in', { timeout: 10000 }, async () => {
-    vi.useRealTimers();
-
-    // Set up iframe
-    _ensureFrame();
-    await new Promise((r) => setTimeout(r, 10));
-    simulateFrameMessage({ type: 'atshare-frame-ready' });
-    await new Promise((r) => setTimeout(r, 10));
-
+  it('updates getSession() after successful sign-in', async () => {
     const promise = signIn('rob.bsky.social');
 
-    // Wait for the 2-second session poll to fire
-    await new Promise((r) => setTimeout(r, 2500));
-
-    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
-      c => c[0]?.type === 'restoreSession'
-    );
-    expect(call).toBeTruthy();
-    simulateFrameMessage({ id: call[0].id, result: { sub: 'did:plc:rob2' } });
-
+    simulateFrameMessage({ type: 'atshare-auth-complete', did: 'did:plc:rob2' });
     await promise;
-    expect(getSession()).toEqual({ sub: 'did:plc:rob2' });
 
-    vi.useFakeTimers();
+    expect(getSession()).toEqual({ sub: 'did:plc:rob2' });
   });
 });
 
