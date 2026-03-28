@@ -5,11 +5,14 @@
  * authenticates at their PDS. Calls client.init() which:
  *   1. Detects the OAuth params (?code=...&state=...) in window.location
  *   2. Completes the PKCE + DPoP exchange
- *   3. Sends the session to the originating tab via BroadcastChannel
- *   4. Calls window.close() to close the popup
+ *   3. Stores the session in browser storage
+ *
+ * After init() completes, posts the authentication result to the opener window
+ * (the embedding site) with the user's DID, then closes the popup. On error,
+ * posts an error message to the opener before closing.
  *
  * The clientId and handleResolver MUST be identical to the values used
- * in auth.js — the BroadcastChannel key is derived from clientId.
+ * in auth.js.
  */
 
 import { BrowserOAuthClient } from '@atproto/oauth-client-browser';
@@ -19,6 +22,24 @@ const client = await BrowserOAuthClient.load({
   handleResolver: 'https://bsky.social',
 });
 
-// init() auto-detects callback params and handles everything.
-// window.close() is called internally by the library on success.
-await client.init();
+try {
+  // init() auto-detects callback params and completes the OAuth exchange.
+  const result = await client.init();
+
+  // Post success message to opener with the user's DID.
+  if (result?.session) {
+    window.opener?.postMessage({
+      type: 'atshare-auth-complete',
+      did: result.session.sub,
+    }, '*');
+  }
+} catch (err) {
+  // Post error message to opener on failure.
+  window.opener?.postMessage({
+    type: 'atshare-auth-error',
+    error: err.message,
+  }, '*');
+} finally {
+  // Close the popup after success or error.
+  window.close();
+}
