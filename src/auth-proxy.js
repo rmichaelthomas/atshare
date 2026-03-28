@@ -202,8 +202,9 @@ export async function restoreSession() {
  * @returns {Promise<void>}
  */
 export async function signOut() {
+  if (!_did) return;
   await _ensureFrame();
-  await _postToFrame({ type: 'signOut' });
+  await _postToFrame({ type: 'signOut', did: _did });
   _did = null;
 }
 
