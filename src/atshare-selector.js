@@ -11,9 +11,9 @@
  */
 
 import { NETWORKS, buildIntentUrl } from './networks.js';
-import { getPublicPreference, putPreference } from './pds.js';
-import { signIn, restoreSession, signOut, getSession } from './auth.js';
-import { resolveIdentity, resolvePdsEndpoint } from './identity.js';
+import { getPublicPreference } from './pds.js';
+import { resolveIdentity } from './identity.js';
+import { signIn, checkSession, signOut, getSession, putPreference } from './auth-proxy.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -347,17 +347,10 @@ class AtshareSelector extends HTMLElement {
 
   async _tryRestoreSession() {
     try {
-      const session = await restoreSession();
-      if (!session) return;
-      try {
-        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
-        const pref = await getPublicPreference(pdsEndpoint, session.sub);
-        if (pref) {
-          this._preference = pref;
-          this._renderNetworks();
-        }
-      } catch {}
-      this._setSigninState('signedin', { handle: session.sub });
+      const { did } = await checkSession();
+      if (!did) return;
+      // Server session exists — user previously signed in via OAuth
+      // The handle lookup will display the handle; this just confirms auth for writes
     } catch {}
   }
 
@@ -466,12 +459,10 @@ class AtshareSelector extends HTMLElement {
     try {
       localStorage.setItem('atshare.preference', JSON.stringify(pref));
     } catch {}
-    // Write to PDS if authenticated (same-origin only, fire-and-forget)
+    // Write to PDS via server proxy if authenticated (fire-and-forget)
     const session = getSession();
     if (session) {
-      resolvePdsEndpoint(session.sub)
-        .then(pdsEndpoint => putPreference(pdsEndpoint, session.sub, session.fetchHandler, pref))
-        .catch(() => {});
+      putPreference(session.sub, pref).catch(() => {});
     }
   }
 
@@ -550,7 +541,7 @@ class AtshareSelector extends HTMLElement {
   }
 
   async _onSignOut() {
-    try { await signOut(); } catch {}
+    try { await signOut(); } catch {} // revoke server session
     try { localStorage.removeItem('atshare.handle'); } catch {}
     this._preference = null;
     this._renderNetworks();

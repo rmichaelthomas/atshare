@@ -27,7 +27,7 @@ const configs = {
     },
   },
   lib: {
-    // Library build — oauth lib external (only used same-origin on atshare.social)
+    // Library build — zero external dependencies (auth goes through server API)
     build: {
       outDir: 'dist',
       lib: {
@@ -35,9 +35,6 @@ const configs = {
         name: 'AtshareSelector',
         fileName: 'atshare-selector',
         formats: ['es', 'umd'],
-      },
-      rollupOptions: {
-        external: ['@atproto/oauth-client-browser'],
       },
     },
   },
