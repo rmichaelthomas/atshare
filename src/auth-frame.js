@@ -27,6 +27,19 @@ let _client = null;
  * Exported so tests can call it directly after mocking dependencies.
  */
 export async function init() {
+  // When embedded as a third-party iframe, browsers partition storage.
+  // Request unpartitioned access so we can read sessions stored by the
+  // OAuth callback popup (which runs as top-level atshare.social).
+  // Auto-granted in Chrome/Brave after the user interacts with atshare.social
+  // via the OAuth popup. Safari requires a user gesture (known limitation).
+  if (document.requestStorageAccess) {
+    try {
+      await document.requestStorageAccess();
+    } catch {
+      // Access denied — continue with partitioned storage
+    }
+  }
+
   _client = await BrowserOAuthClient.load({
     clientId: CLIENT_ID,
     handleResolver: HANDLE_RESOLVER,
@@ -68,6 +81,11 @@ async function _onMessage(event) {
 
     switch (type) {
       case 'restoreSession': {
+        // Request unpartitioned storage on each check — the OAuth popup
+        // may have just completed, granting first-party interaction status.
+        if (document.requestStorageAccess) {
+          try { await document.requestStorageAccess(); } catch {}
+        }
         // Read the last-authenticated DID from localStorage (written by the
         // callback page after a successful OAuth exchange) and restore the
         // full session from IndexedDB. Using restore(sub) directly instead
