@@ -1,20 +1,39 @@
 /**
  * PDS preference record read/write.
  *
- * Reads and writes social.atshare.preference to the user's PDS.
- * Uses the session's fetchHandler from @atproto/oauth-client-browser,
- * which automatically handles DPoP headers and token refresh.
- * Callers do NOT set Authorization headers — fetchHandler owns auth.
+ * Two modes:
+ *   getPublicPreference() — unauthenticated GET via plain fetch().
+ *     Works cross-origin. Used by third-party sites to load a user's
+ *     preference by handle without OAuth.
+ *
+ *   getPreference() / putPreference() — authenticated via fetchHandler.
+ *     Used on atshare.social (same-origin) for reading/writing with OAuth.
  */
 
 export const PREFERENCE_NSID = 'social.atshare.preference';
 
 /**
- * Read the user's atShare preference record from their PDS.
+ * Read a user's atShare preference record from their PDS (public, no auth).
+ * Uses plain fetch() — works from any origin.
  * @param {string} pdsEndpoint - e.g. "https://morel.us-east.host.bsky.network"
  * @param {string} did - the user's DID
- * @param {Function} fetchHandler - session.fetchHandler from oauth-client-browser
  * @returns {Promise<object|null>} preference record value, or null if not found
+ */
+export async function getPublicPreference(pdsEndpoint, did) {
+  const url = `${pdsEndpoint}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${PREFERENCE_NSID}&rkey=self`;
+  const res = await fetch(url);
+  if (res.status === 400 || res.status === 404) return null;
+  if (!res.ok) throw new Error(`getRecord failed: ${res.status}`);
+  const { value } = await res.json();
+  return value;
+}
+
+/**
+ * Read the user's atShare preference record from their PDS (authenticated).
+ * @param {string} pdsEndpoint
+ * @param {string} did
+ * @param {Function} fetchHandler - session.fetchHandler from oauth-client-browser
+ * @returns {Promise<object|null>}
  */
 export async function getPreference(pdsEndpoint, did, fetchHandler) {
   const url = `${pdsEndpoint}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${PREFERENCE_NSID}&rkey=self`;

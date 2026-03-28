@@ -11,7 +11,9 @@
  */
 
 import { NETWORKS, buildIntentUrl } from './networks.js';
-import { signIn, cancelSignIn, restoreSession, signOut, getSession, getPreference, putPreference } from './auth-proxy.js';
+import { getPublicPreference, putPreference } from './pds.js';
+import { signIn, restoreSession, signOut, getSession } from './auth.js';
+import { resolveIdentity, resolvePdsEndpoint } from './identity.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -139,7 +141,7 @@ TEMPLATE.innerHTML = `
       padding: 6px 10px;
     }
 
-    /* State: signed-out — single "Sign in to save preference" link */
+    /* State: signed-out — single "Enter handle to load preference" link */
     .signin-prompt {
       display: none;
       font-size: 12px;
@@ -250,7 +252,7 @@ TEMPLATE.innerHTML = `
         <button class="mastodon-go-btn">Share</button>
       </div>
       <div class="signin-zone state-signedout">
-        <button class="signin-prompt">Sign in to save preference</button>
+        <button class="signin-prompt">Enter handle to load preference</button>
 
         <div class="signin-handle-wrap">
           <label>Your AT Protocol handle</label>
@@ -260,13 +262,13 @@ TEMPLATE.innerHTML = `
         </div>
 
         <div class="signin-waiting">
-          <span>Opening sign-in…</span>
+          <span>Loading preference…</span>
           <button class="signin-cancel-btn">Cancel</button>
         </div>
 
         <div class="signin-info">
           <span class="signin-handle"></span>
-          <button class="signin-signout-btn">Sign out</button>
+          <button class="signin-signout-btn">Forget</button>
         </div>
       </div>
       <div class="divider"></div>
@@ -340,23 +342,36 @@ class AtshareSelector extends HTMLElement {
   connectedCallback() {
     this._render();
     this._tryRestoreSession();
+    this._tryLoadSavedHandle();
   }
 
   async _tryRestoreSession() {
     try {
       const session = await restoreSession();
       if (!session) return;
-
       try {
-        const pref = await getPreference(session.sub);
+        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
+        const pref = await getPublicPreference(pdsEndpoint, session.sub);
         if (pref) {
           this._preference = pref;
           this._renderNetworks();
         }
       } catch {}
-
-      // TODO: resolve DID to handle for display (see Known Limitations)
       this._setSigninState('signedin', { handle: session.sub });
+    } catch {}
+  }
+
+  async _tryLoadSavedHandle() {
+    try {
+      const handle = localStorage.getItem('atshare.handle');
+      if (!handle) return;
+      const { did, pdsEndpoint } = await resolveIdentity(handle);
+      const pref = await getPublicPreference(pdsEndpoint, did);
+      if (pref) {
+        this._preference = pref;
+        this._renderNetworks();
+      }
+      this._setSigninState('signedin', { handle });
     } catch {}
   }
 
@@ -448,16 +463,15 @@ class AtshareSelector extends HTMLElement {
       primaryNetwork: networkId,
       networks: this._buildNetworksArray(networkId, opts),
     };
-
-    // Always write to localStorage as fallback
     try {
       localStorage.setItem('atshare.preference', JSON.stringify(pref));
     } catch {}
-
-    // Write to PDS if authenticated (fire-and-forget, don't await)
+    // Write to PDS if authenticated (same-origin only, fire-and-forget)
     const session = getSession();
     if (session) {
-      putPreference(session.sub, pref).catch(() => {});
+      resolvePdsEndpoint(session.sub)
+        .then(pdsEndpoint => putPreference(pdsEndpoint, session.sub, session.fetchHandler, pref))
+        .catch(() => {});
     }
   }
 
@@ -516,38 +530,28 @@ class AtshareSelector extends HTMLElement {
   async _onSigninContinue() {
     const handle = this._signinHandleInput.value.trim();
     if (!handle) return;
-
     this._setSigninState('waiting');
-
     try {
-      const session = await signIn(handle);
-
-      // Load preference from PDS (non-blocking; errors are silent)
-      try {
-        const pref = await getPreference(session.sub);
-        if (pref) {
-          this._preference = pref;
-          this._renderNetworks();
-        }
-      } catch {}
-
-      // TODO: resolve DID to handle for display (see Known Limitations)
-      this._setSigninState('signedin', { handle: session.sub });
+      const { did, pdsEndpoint } = await resolveIdentity(handle);
+      const pref = await getPublicPreference(pdsEndpoint, did);
+      if (pref) {
+        this._preference = pref;
+        this._renderNetworks();
+      }
+      try { localStorage.setItem('atshare.handle', handle); } catch {}
+      this._setSigninState('signedin', { handle });
     } catch (err) {
-      const msg = err?.message?.includes('cancel') || err?.message?.includes('cancelled')
-        ? 'Sign-in cancelled'
-        : 'Sign-in failed — try again';
-      this._setSigninState('handle', { errorMsg: msg });
+      this._setSigninState('handle', { errorMsg: "Couldn't find that handle" });
     }
   }
 
   _onSigninCancel() {
-    cancelSignIn();
     this._setSigninState('signedout');
   }
 
   async _onSignOut() {
-    await signOut();
+    try { await signOut(); } catch {}
+    try { localStorage.removeItem('atshare.handle'); } catch {}
     this._preference = null;
     this._renderNetworks();
     this._setSigninState('signedout');

@@ -9,9 +9,7 @@
     "build": "vite build",
     "build:callback": "BUILD_TARGET=callback vite build",
     "build:demo": "BUILD_TARGET=demo vite build",
-    "build:auth-page": "BUILD_TARGET=auth-page vite build",
-    "build:auth-frame": "BUILD_TARGET=auth-frame vite build",
-    "build:all": "npm run build && npm run build:callback && npm run build:demo && npm run build:auth-page && npm run build:auth-frame",
+    "build:all": "npm run build && npm run build:callback && npm run build:demo",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

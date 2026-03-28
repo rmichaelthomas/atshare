@@ -26,26 +26,8 @@ const configs = {
       },
     },
   },
-  'auth-page': {
-    // App build for the auth page — bundles all dependencies
-    build: {
-      outDir: 'dist/auth',
-      rollupOptions: {
-        input: resolve(__dirname, 'public/auth/index.html'),
-      },
-    },
-  },
-  'auth-frame': {
-    // App build for the auth frame — bundles all dependencies
-    build: {
-      outDir: 'dist/auth-frame',
-      rollupOptions: {
-        input: resolve(__dirname, 'public/auth-frame.html'),
-      },
-    },
-  },
   lib: {
-    // Library build for the web component — no external dependencies
+    // Library build — oauth lib external (only used same-origin on atshare.social)
     build: {
       outDir: 'dist',
       lib: {
@@ -53,6 +35,9 @@ const configs = {
         name: 'AtshareSelector',
         fileName: 'atshare-selector',
         formats: ['es', 'umd'],
+      },
+      rollupOptions: {
+        external: ['@atproto/oauth-client-browser'],
       },
     },
   },
