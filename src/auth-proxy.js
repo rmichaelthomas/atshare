@@ -143,15 +143,25 @@ export function signIn(handle) {
       }
     }
 
-    // Poll for popup being closed by the user
+    // Poll for popup being closed by the user.
+    // When popup.closed is detected, wait a grace period before rejecting —
+    // the callback page sends postMessage right before window.close(), and
+    // the message event may still be in the event queue when we detect closure.
     const pollInterval = setInterval(() => {
       if (popup.closed) {
-        cleanup();
-        reject(new Error('Sign-in cancelled: popup was closed'));
+        clearInterval(pollInterval);
+        setTimeout(() => {
+          // If the message handler already resolved/rejected, cleanup is a no-op
+          cleanup();
+          reject(new Error('Sign-in cancelled: popup was closed'));
+        }, 500);
       }
     }, 500);
 
+    let settled = false;
     function cleanup() {
+      if (settled) return; // idempotent — prevent double resolve/reject
+      settled = true;
       clearInterval(pollInterval);
       window.removeEventListener('message', onAuthMessage);
       if (_currentPopup === popup) {

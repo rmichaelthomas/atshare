@@ -402,29 +402,31 @@ describe('signIn', () => {
     await expect(signIn('rob.bsky.social')).rejects.toThrow('Popup was blocked');
   });
 
-  it('rejects when popup is closed by the user (polling)', async () => {
+  it('rejects when popup is closed by the user (polling + grace period)', async () => {
     const promise = signIn('rob.bsky.social');
 
     // Simulate user closing the popup
     mockPopup.closed = true;
-    vi.advanceTimersByTime(600); // past the 500ms poll interval
+    vi.advanceTimersByTime(600); // past the 500ms poll interval (detects closure)
+    vi.advanceTimersByTime(600); // past the 500ms grace period (rejects)
 
     await expect(promise).rejects.toThrow('Sign-in cancelled');
   });
 
-  it('does NOT reject before the poll interval elapses', async () => {
+  it('does NOT reject during the grace period after popup close', async () => {
     const promise = signIn('rob.bsky.social');
     mockPopup.closed = true;
 
-    vi.advanceTimersByTime(400); // less than 500ms
+    vi.advanceTimersByTime(600); // poll detects closure
+    vi.advanceTimersByTime(200); // inside 500ms grace period
 
     let settled = false;
     promise.then(() => { settled = true; }).catch(() => { settled = true; });
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    // Cleanup
-    vi.advanceTimersByTime(200);
+    // Cleanup: advance past grace period
+    vi.advanceTimersByTime(400);
     await promise.catch(() => {}); // absorb rejection
   });
 
@@ -491,7 +493,8 @@ describe('cancelSignIn', () => {
 
     // cancelSignIn called close(); simulate the popup actually closing
     mockPopup.closed = true;
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600); // poll detects closure
+    vi.advanceTimersByTime(600); // grace period passes
 
     await expect(promise).rejects.toThrow('Sign-in cancelled');
   });
