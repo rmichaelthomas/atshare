@@ -374,36 +374,13 @@ describe('signIn', () => {
     expect(url).toContain(encodeURIComponent('user@weird handle.social'));
   });
 
-  it('resolves with {sub} on atshare-auth-complete', async () => {
-    const promise = signIn('rob.bsky.social');
-
-    simulateFrameMessage({ type: 'atshare-auth-complete', did: 'did:plc:rob' });
-
-    const result = await promise;
-    expect(result).toEqual({ sub: 'did:plc:rob' });
-  });
-
-  it('rejects on atshare-auth-error', async () => {
-    const promise = signIn('rob.bsky.social');
-
-    simulateFrameMessage({ type: 'atshare-auth-error', error: 'OAuth error' });
-
-    await expect(promise).rejects.toThrow('OAuth error');
-  });
-
-  it('rejects with default message when error field is missing', async () => {
-    const promise = signIn('rob.bsky.social');
-    simulateFrameMessage({ type: 'atshare-auth-error' });
-    await expect(promise).rejects.toThrow('Authentication failed');
-  });
-
   it('rejects when the popup is blocked (window.open returns null)', async () => {
     openMock.mockReturnValue(null);
     await expect(signIn('rob.bsky.social')).rejects.toThrow('Popup was blocked');
   });
 
-  it('resolves when popup closes and session is found in iframe', { timeout: 10000 }, async () => {
-    vi.useRealTimers(); // async setTimeout + _postToFrame is too complex for fake timers
+  it('resolves when session appears in iframe (polling)', { timeout: 10000 }, async () => {
+    vi.useRealTimers();
 
     // Set up iframe
     _ensureFrame();
@@ -412,12 +389,11 @@ describe('signIn', () => {
     await new Promise((r) => setTimeout(r, 10));
 
     const promise = signIn('rob.bsky.social');
-    mockPopup.closed = true;
 
-    // Wait for poll (500ms) + grace (300ms) + buffer
-    await new Promise((r) => setTimeout(r, 1000));
+    // Wait for the 2-second session poll to fire
+    await new Promise((r) => setTimeout(r, 2500));
 
-    // _postToFrame sent a restoreSession request — find its id and respond
+    // The poll sent a restoreSession request — find its id and respond with a session
     const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
       c => c[0]?.type === 'restoreSession'
     );
@@ -427,54 +403,33 @@ describe('signIn', () => {
     const result = await promise;
     expect(result).toEqual({ sub: 'did:plc:found' });
 
-    vi.useFakeTimers(); // restore for other tests
+    vi.useFakeTimers();
   });
 
-  it('rejects when popup closes and no session found in iframe', { timeout: 10000 }, async () => {
+  it('updates getSession() after successful sign-in', { timeout: 10000 }, async () => {
     vi.useRealTimers();
 
+    // Set up iframe
     _ensureFrame();
     await new Promise((r) => setTimeout(r, 10));
     simulateFrameMessage({ type: 'atshare-frame-ready' });
     await new Promise((r) => setTimeout(r, 10));
 
     const promise = signIn('rob.bsky.social');
-    mockPopup.closed = true;
 
-    await new Promise((r) => setTimeout(r, 1000));
+    // Wait for the 2-second session poll to fire
+    await new Promise((r) => setTimeout(r, 2500));
 
     const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
       c => c[0]?.type === 'restoreSession'
     );
     expect(call).toBeTruthy();
-    simulateFrameMessage({ id: call[0].id, result: null });
+    simulateFrameMessage({ id: call[0].id, result: { sub: 'did:plc:rob2' } });
 
-    await expect(promise).rejects.toThrow('Sign-in cancelled');
-
-    vi.useFakeTimers();
-  });
-
-  it('ignores auth messages from wrong origin', async () => {
-    const promise = signIn('rob.bsky.social');
-
-    simulateWrongOriginMessage({ type: 'atshare-auth-complete', did: 'did:plc:evil' });
-
-    // Promise should still be pending
-    let settled = false;
-    promise.then(() => { settled = true; }).catch(() => { settled = true; });
-    await Promise.resolve();
-    expect(settled).toBe(false);
-
-    // Cleanup via legitimate resolution
-    simulateFrameMessage({ type: 'atshare-auth-complete', did: 'did:plc:real' });
-    await promise;
-  });
-
-  it('updates getSession() after successful sign-in', async () => {
-    const promise = signIn('rob.bsky.social');
-    simulateFrameMessage({ type: 'atshare-auth-complete', did: 'did:plc:rob2' });
     await promise;
     expect(getSession()).toEqual({ sub: 'did:plc:rob2' });
+
+    vi.useFakeTimers();
   });
 });
 
@@ -483,12 +438,15 @@ describe('signIn', () => {
 // ---------------------------------------------------------------------------
 
 describe('cancelSignIn', () => {
-  it('closes the current popup', () => {
+  it('closes the current popup', async () => {
     const mockPopup = { closed: false, close: vi.fn() };
     vi.spyOn(window, 'open').mockReturnValue(mockPopup);
 
-    signIn('rob.bsky.social');
+    const promise = signIn('rob.bsky.social');
     cancelSignIn();
+
+    // Catch the rejection so it doesn't become an unhandled rejection
+    await promise.catch(() => {});
 
     expect(mockPopup.close).toHaveBeenCalledOnce();
   });
@@ -498,42 +456,14 @@ describe('cancelSignIn', () => {
     expect(() => cancelSignIn()).not.toThrow();
   });
 
-  it('is a no-op when popup is already closed', () => {
-    const mockPopup = { closed: true, close: vi.fn() };
-    vi.spyOn(window, 'open').mockReturnValue(mockPopup);
-
-    signIn('rob.bsky.social');
-    cancelSignIn();
-
-    expect(mockPopup.close).not.toHaveBeenCalled();
-  });
-
-  it('causes signIn promise to reject after poll detects closed popup', { timeout: 10000 }, async () => {
-    vi.useRealTimers();
-
-    _ensureFrame();
-    await new Promise((r) => setTimeout(r, 10));
-    simulateFrameMessage({ type: 'atshare-frame-ready' });
-    await new Promise((r) => setTimeout(r, 10));
-
+  it('causes signIn promise to reject immediately', async () => {
     const mockPopup = { closed: false, close: vi.fn() };
     vi.spyOn(window, 'open').mockReturnValue(mockPopup);
 
     const promise = signIn('rob.bsky.social');
     cancelSignIn();
-    mockPopup.closed = true;
-
-    await new Promise((r) => setTimeout(r, 1000));
-
-    const call = fakeIframe.contentWindow.postMessage.mock.calls.find(
-      c => c[0]?.type === 'restoreSession'
-    );
-    expect(call).toBeTruthy();
-    simulateFrameMessage({ id: call[0].id, result: null });
 
     await expect(promise).rejects.toThrow('Sign-in cancelled');
-
-    vi.useFakeTimers();
   });
 });
 
