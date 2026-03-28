@@ -7,42 +7,20 @@
  *   2. Completes the PKCE + DPoP exchange
  *   3. Stores the session in browser storage
  *
- * After init(), this page waits for the embedding component to request
- * the DID via postMessage. This avoids relying on window.opener (stripped
- * by some browsers after cross-origin navigation), BroadcastChannel
- * (partitioned in third-party contexts), or popup.closed (unreliable
- * cross-origin). The component polls with {type: 'atshare-get-did'}
- * and this page responds with the DID.
+ * The component polls this page with {type: 'atshare-get-did'} via
+ * postMessage. Once the DID is available, we respond. The component
+ * then sends {type: 'atshare-close'} and we close the popup.
  */
 
 import { BrowserOAuthClient } from '@atproto/oauth-client-browser';
 
-const client = await BrowserOAuthClient.load({
-  clientId: 'https://atshare.social/client-metadata.json',
-  handleResolver: 'https://bsky.social',
-});
-
+// DID is set after successful init; null while still loading
 let authDid = null;
-let authError = null;
 
-try {
-  const result = await client.init();
-  if (result?.session) {
-    authDid = result.session.sub;
-  }
-} catch (err) {
-  authError = err.message;
-}
-
-// If auth failed, broadcast error and close immediately
-if (authError) {
-  window.opener?.postMessage({ type: 'atshare-auth-error', error: authError }, '*');
-  window.close();
-}
-
-// Auth succeeded — wait for the component to ask for the DID.
-// The component polls with {type: 'atshare-get-did'} every 2 seconds.
-// We respond with the DID and wait for {type: 'atshare-close'} to close.
+// Set up the message listener IMMEDIATELY — before async init.
+// The component polls every 2 seconds. Early polls (before init completes)
+// won't get a response because authDid is still null, but the next poll
+// after init completes will succeed.
 window.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || typeof data !== 'object') return;
@@ -59,9 +37,22 @@ window.addEventListener('message', (event) => {
   }
 });
 
-// Also try direct notification (works when window.opener is preserved)
-if (authDid) {
-  window.opener?.postMessage({ type: 'atshare-auth-complete', did: authDid }, '*');
+// Now run the async OAuth exchange
+const client = await BrowserOAuthClient.load({
+  clientId: 'https://atshare.social/client-metadata.json',
+  handleResolver: 'https://bsky.social',
+});
+
+try {
+  const result = await client.init();
+  if (result?.session) {
+    authDid = result.session.sub;
+    // Also try direct notification (works when window.opener is preserved)
+    window.opener?.postMessage({ type: 'atshare-auth-complete', did: authDid }, '*');
+  }
+} catch (err) {
+  window.opener?.postMessage({ type: 'atshare-auth-error', error: err.message }, '*');
+  window.close();
 }
 
 // Safety: auto-close after 5 minutes if component never acknowledges
