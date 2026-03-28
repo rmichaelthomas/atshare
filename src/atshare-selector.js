@@ -11,9 +11,7 @@
  */
 
 import { NETWORKS, buildIntentUrl } from './networks.js';
-import { getPreference, putPreference } from './pds.js';
-import { signIn, restoreSession, signOut, getSession } from './auth.js';
-import { resolvePdsEndpoint } from './identity.js';
+import { signIn, cancelSignIn, restoreSession, signOut, getSession, getPreference, putPreference } from './auth-proxy.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -312,8 +310,6 @@ class AtshareSelector extends HTMLElement {
     this._signinHandle      = this.shadowRoot.querySelector('.signin-handle');
     this._signinSignoutBtn  = this.shadowRoot.querySelector('.signin-signout-btn');
 
-    this._signinAbortController = null; // used to cancel popup
-
     // Event listeners for sign-in zone
     this._signinPrompt.addEventListener('click', () => this._setSigninState('handle'));
     this._signinContinueBtn.addEventListener('click', () => this._onSigninContinue());
@@ -352,21 +348,16 @@ class AtshareSelector extends HTMLElement {
       if (!session) return;
 
       try {
-        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
-        const pref = await getPreference(pdsEndpoint, session.sub, session.fetchHandler);
+        const pref = await getPreference(session.sub);
         if (pref) {
           this._preference = pref;
           this._renderNetworks();
         }
-      } catch {
-        // Preference load failure is silent
-      }
+      } catch {}
 
       // TODO: resolve DID to handle for display (see Known Limitations)
       this._setSigninState('signedin', { handle: session.sub });
-    } catch {
-      // restoreSession failure is silent — show signed-out state (default)
-    }
+    } catch {}
   }
 
   attributeChangedCallback(name, _old, value) {
@@ -461,20 +452,12 @@ class AtshareSelector extends HTMLElement {
     // Always write to localStorage as fallback
     try {
       localStorage.setItem('atshare.preference', JSON.stringify(pref));
-    } catch {
-      // localStorage unavailable — no-op
-    }
+    } catch {}
 
     // Write to PDS if authenticated (fire-and-forget, don't await)
     const session = getSession();
     if (session) {
-      resolvePdsEndpoint(session.sub)
-        .then((pdsEndpoint) =>
-          putPreference(pdsEndpoint, session.sub, session.fetchHandler, pref)
-        )
-        .catch(() => {
-          // PDS write failure is silent — localStorage fallback already written
-        });
+      putPreference(session.sub, pref).catch(() => {});
     }
   }
 
@@ -536,29 +519,22 @@ class AtshareSelector extends HTMLElement {
 
     this._setSigninState('waiting');
 
-    this._signinAbortController = new AbortController();
-
     try {
-      const session = await signIn(handle, this._signinAbortController.signal);
-      this._signinAbortController = null;
+      const session = await signIn(handle);
 
       // Load preference from PDS (non-blocking; errors are silent)
       try {
-        const pdsEndpoint = await resolvePdsEndpoint(session.sub);
-        const pref = await getPreference(pdsEndpoint, session.sub, session.fetchHandler);
+        const pref = await getPreference(session.sub);
         if (pref) {
           this._preference = pref;
           this._renderNetworks();
         }
-      } catch {
-        // Preference load failure is silent — share still works
-      }
+      } catch {}
 
       // TODO: resolve DID to handle for display (see Known Limitations)
       this._setSigninState('signedin', { handle: session.sub });
     } catch (err) {
-      this._signinAbortController = null;
-      const msg = err?.message?.includes('Abort') || err?.message?.includes('cancel')
+      const msg = err?.message?.includes('cancel') || err?.message?.includes('cancelled')
         ? 'Sign-in cancelled'
         : 'Sign-in failed — try again';
       this._setSigninState('handle', { errorMsg: msg });
@@ -566,8 +542,7 @@ class AtshareSelector extends HTMLElement {
   }
 
   _onSigninCancel() {
-    this._signinAbortController?.abort();
-    this._signinAbortController = null;
+    cancelSignIn();
     this._setSigninState('signedout');
   }
 
