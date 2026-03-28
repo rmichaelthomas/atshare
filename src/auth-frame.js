@@ -20,8 +20,9 @@ const HANDLE_RESOLVER = 'https://bsky.social';
 let _client = null;
 
 /**
- * Initialize the BrowserOAuthClient and begin listening for postMessage
- * requests from the parent window.
+ * Initialize the BrowserOAuthClient, begin listening for postMessage
+ * requests from the parent window, and set up a BroadcastChannel relay
+ * for auth-complete messages from the callback page.
  *
  * Exported so tests can call it directly after mocking dependencies.
  */
@@ -32,6 +33,18 @@ export async function init() {
   });
 
   window.addEventListener('message', _onMessage);
+
+  // Relay auth-complete/error from the callback page (same origin,
+  // via BroadcastChannel) to the parent window (cross-origin, via postMessage).
+  // This avoids relying on window.opener, which some browsers strip
+  // when the popup navigates through a cross-origin PDS auth page.
+  const authChannel = new BroadcastChannel('atshare-auth-channel');
+  authChannel.addEventListener('message', (event) => {
+    const { type } = event.data || {};
+    if (type === 'atshare-auth-complete' || type === 'atshare-auth-error') {
+      window.parent.postMessage(event.data, '*');
+    }
+  });
 
   window.parent.postMessage({ type: 'atshare-frame-ready' }, '*');
 }
@@ -69,8 +82,9 @@ async function _onMessage(event) {
       case 'getPreference': {
         const session = await _client.restore(data.did);
         const tokenInfo = await session.getTokenInfo();
+        const pdsEndpoint = tokenInfo.aud.replace(/\/+$/, '');
         result = await getPreference(
-          tokenInfo.aud,
+          pdsEndpoint,
           data.did,
           session.fetchHandler.bind(session)
         );
@@ -80,8 +94,9 @@ async function _onMessage(event) {
       case 'putPreference': {
         const session = await _client.restore(data.did);
         const tokenInfo = await session.getTokenInfo();
+        const pdsEndpoint = tokenInfo.aud.replace(/\/+$/, '');
         await putPreference(
-          tokenInfo.aud,
+          pdsEndpoint,
           data.did,
           session.fetchHandler.bind(session),
           data.preference

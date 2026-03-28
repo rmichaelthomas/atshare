@@ -22,24 +22,35 @@ const client = await BrowserOAuthClient.load({
   handleResolver: 'https://bsky.social',
 });
 
+// BroadcastChannel relay — the auth-frame (hidden iframe on atshare.social)
+// listens on this channel and forwards the message to the parent component
+// via window.parent.postMessage(). This is the primary notification path
+// because window.opener may be null if the popup navigated cross-origin.
+const authChannel = new BroadcastChannel('atshare-auth-channel');
+
 try {
   // init() auto-detects callback params and completes the OAuth exchange.
   const result = await client.init();
 
-  // Post success message to opener with the user's DID.
   if (result?.session) {
-    window.opener?.postMessage({
+    const message = {
       type: 'atshare-auth-complete',
       did: result.session.sub,
-    }, '*');
+    };
+    // Broadcast to auth-frame (same-origin, always works)
+    authChannel.postMessage(message);
+    // Also try direct postMessage to opener (works when window.opener is preserved)
+    window.opener?.postMessage(message, '*');
   }
 } catch (err) {
-  // Post error message to opener on failure.
-  window.opener?.postMessage({
+  const message = {
     type: 'atshare-auth-error',
     error: err.message,
-  }, '*');
+  };
+  authChannel.postMessage(message);
+  window.opener?.postMessage(message, '*');
 } finally {
+  authChannel.close();
   // Close the popup after success or error.
   window.close();
 }
