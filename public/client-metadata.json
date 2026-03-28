@@ -5,7 +5,7 @@
   "logo_uri": "https://atshare.social/logo.png",
   "tos_uri": "https://atshare.social/tos",
   "policy_uri": "https://atshare.social/privacy",
-  "redirect_uris": ["https://atshare.social/oauth/callback"],
+  "redirect_uris": ["https://atshare.social/oauth/callback/"],
   "scope": "atproto",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
