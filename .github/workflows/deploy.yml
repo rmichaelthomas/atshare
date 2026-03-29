@@ -1,0 +1,43 @@
+name: Deploy to Production
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Assemble deploy folder
+        run: |
+          mkdir -p deploy/dist
+          mkdir -p deploy/demo
+
+          # Landing page
+          cp index.html deploy/
+
+          # Built component bundles
+          cp dist/atshare-selector.js deploy/dist/
+          cp dist/atshare-selector.umd.cjs deploy/dist/
+
+          # Demo page
+          cp public/demo/index.html deploy/demo/
+
+      - name: Deploy via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          ssh_private_key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          port: ${{ secrets.SFTP_PORT }}
+          local_path: ./deploy/
+          remote_path: /home/adjaxahy/public_html/
+          sftpArgs: '-o StrictHostKeyChecking=no'
