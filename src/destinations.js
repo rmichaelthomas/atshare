@@ -68,6 +68,10 @@ export function buildIntentUrl(clientId, vars = {}) {
 
   let url = client.intentUrl;
   if (vars.instance) {
+    // Ensure instance URL uses https:// (defense-in-depth against localStorage poisoning)
+    if (!/^https?:\/\//i.test(vars.instance)) {
+      vars.instance = `https://${vars.instance}`;
+    }
     url = url.replace('{instance}', vars.instance);
   }
   url = url.replace('{text}', encodeURIComponent(vars.text || ''));

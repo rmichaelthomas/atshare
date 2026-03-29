@@ -1230,6 +1230,7 @@ class AtshareSelector extends HTMLElement {
 
       const onMessage = (e) => {
         if (settled) return;
+        if (e.origin !== 'https://atshare.social') return;
         const msg = e.data;
         if (!msg || msg.type !== 'atshare-auth-callback') return;
         settled = true;
