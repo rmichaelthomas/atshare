@@ -19,10 +19,10 @@ Universal share selector for [AT Protocol](https://atproto.com) and [ActivityPub
 
 - **Zero dependencies in the embed** -- a single `<script>` tag, no framework required
 - **Bluesky + Mastodon** sharing out of the box
-- **Preference memory** -- users enter their AT Protocol handle once, and atShare remembers their preferred network across sites by reading their public PDS record
+- **Preference memory** -- share once and your preferred network is remembered locally; sign in with your Bluesky handle to sync your preference across every site running atShare
 - **Themeable** -- CSS custom properties for colors, borders, radius, font size
 - **Shadow DOM** -- styles don't leak in or out
-- **Lightweight** -- ~17 KB (ES module)
+- **Lightweight** -- ~19 KB (ES module)
 
 ## Attributes
 
@@ -50,14 +50,11 @@ atshare-selector {
 
 ## How Preferences Work
 
-atShare can remember a user's preferred network across every site that embeds it -- no account on your site required.
+atShare remembers a user's preferred network across every site that embeds it -- no account on your site required.
 
-1. The user clicks **"Enter handle to load preference"** and types their AT Protocol handle (e.g. `rob.bsky.social`)
-2. atShare resolves the handle, finds their PDS, and reads a public `social.atshare.preference` record
-3. If a preference exists, the preferred network gets a checkmark
-4. The handle is stored in `localStorage` so it loads automatically on future visits
+**Local (automatic):** When a user shares to a network, their choice is saved in `localStorage`. On return visits, that network gets a checkmark.
 
-To *set* a preference, users visit [atshare.social/demo/](https://atshare.social/demo/) and sign in via AT Protocol OAuth (same-origin). Their preference is written to their PDS and follows them to any site running atShare.
+**Cross-site (sign in):** Users click "Sign in" in the selector, enter their Bluesky handle, and complete a one-time OAuth flow via popup. This writes a `social.atshare.preference` record to their PDS. Any site running atShare can read it back and show the checkmark -- the preference follows the user across the web.
 
 ## Development
 
@@ -78,9 +75,13 @@ src/
   atshare-selector.js   Web component
   networks.js           Network definitions (Bluesky, Mastodon)
   identity.js           Handle/DID/PDS resolution
-  pds.js                Preference record read/write
-  auth.js               OAuth wrapper (same-origin only)
-  oauth-callback.js     OAuth callback page
+  pds.js                Preference record read/write (public)
+  auth-proxy.js         Server-backed OAuth proxy client
+server/
+  index.js              Hono API server
+  oauth.js              NodeOAuthClient singleton
+  routes/auth.js        OAuth login/callback/session/logout
+  routes/preference.js  Preference read/write via PDS
 ```
 
 ## License

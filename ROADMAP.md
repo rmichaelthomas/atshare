@@ -10,17 +10,16 @@ Endpoints: `/api/health`, `/api/jwks`, `/api/auth/login`, `/api/auth/callback`, 
 
 ### Component OAuth Sign-In — Done
 
-Two user flows in `<atshare-selector>`:
-- **Handle lookup** (default) — enter handle → public preference read from PDS → ✓ on preferred network
-- **Sign in** — after handle lookup, click "Sign in" → popup OAuth via server proxy → cookie session → preference writes go through `putPreference()` in `auth-proxy.js`
+Simplified sign-in flow in `<atshare-selector>`:
+- **Local preference** — sharing to a network saves the choice in localStorage (automatic, no sign-in needed)
+- **Sign in** — click "Sign in" → enter Bluesky handle → popup OAuth via server proxy → preference written to PDS → syncs across all sites running atShare
 
-Session restore on reload (cookie + localStorage handle). Sign-in zone states: `signedout` → `handle` → `waiting` → `signedin` → `authenticated`.
+Popup opens synchronously on user click (about:blank → OAuth URL) to avoid popup blockers. Session restore on reload via cookie + localStorage handle. Sign-in zone states: `idle` → `input` → `waiting` → `signedin`.
 
 ### Next Up
 
-- **Build and deploy** updated demo to atshare.social (`npm run build:demo`)
 - **Cross-origin testing** from third-party domains against the production API
-- **Error UX** — surface sign-in failures (popup blocked, timeout, cancelled) more clearly
+- **Landing page** — atshare.social home page with docs and live demo
 
 ---
 
