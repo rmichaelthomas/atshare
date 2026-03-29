@@ -31,7 +31,15 @@ jobs:
           # Demo page
           cp public/demo/index.html deploy/demo/
 
-      - name: Deploy via SFTP
+          # Static assets (branding, SEO)
+          cp public/og.png deploy/
+          cp public/favicon.svg deploy/
+          cp public/favicon-32.png deploy/
+          cp public/apple-touch-icon.png deploy/
+          cp public/robots.txt deploy/
+          cp public/.htaccess deploy/
+
+      - name: Deploy via SCP
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SFTP_PRIVATE_KEY }}" > ~/.ssh/deploy_key
@@ -47,9 +55,16 @@ jobs:
           scp $SCP_OPTS deploy/dist/atshare-selector.umd.cjs "${REMOTE}:${DEST}/dist/atshare-selector.umd.cjs"
           scp $SCP_OPTS deploy/demo/index.html "${REMOTE}:${DEST}/demo/index.html"
 
+          scp $SCP_OPTS deploy/og.png "${REMOTE}:${DEST}/og.png"
+          scp $SCP_OPTS deploy/favicon.svg "${REMOTE}:${DEST}/favicon.svg"
+          scp $SCP_OPTS deploy/favicon-32.png "${REMOTE}:${DEST}/favicon-32.png"
+          scp $SCP_OPTS deploy/apple-touch-icon.png "${REMOTE}:${DEST}/apple-touch-icon.png"
+          scp $SCP_OPTS deploy/robots.txt "${REMOTE}:${DEST}/robots.txt"
+          scp $SCP_OPTS deploy/.htaccess "${REMOTE}:${DEST}/.htaccess"
+
           echo "Deploy complete. Verifying..."
 
           # Verify files were written by checking remote timestamps
-          ssh $SCP_OPTS "${REMOTE}" "ls -la ${DEST}/index.html ${DEST}/dist/atshare-selector.js"
+          ssh $SCP_OPTS "${REMOTE}" "ls -la ${DEST}/index.html ${DEST}/dist/atshare-selector.js ${DEST}/og.png ${DEST}/.htaccess"
 
           rm ~/.ssh/deploy_key
