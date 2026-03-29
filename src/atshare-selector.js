@@ -516,7 +516,7 @@ TEMPLATE.innerHTML = `
         <button class="signin-link">Sign in</button>
 
         <div class="signin-handle-wrap">
-          <label>Your Bluesky handle</label>
+          <label>Your ATProto handle</label>
           <input type="text" class="signin-handle-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
           <span class="signin-error"></span>
           <div class="signin-handle-actions">
@@ -541,13 +541,8 @@ TEMPLATE.innerHTML = `
   </div>
 `;
 
-// SVG for chevron (right-pointing arrow)
 const CHEVRON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-
-// SVG for back arrow
 const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
-
-// SVG for clipboard/copy
 const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
 /**
@@ -589,7 +584,6 @@ class AtshareSelector extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.appendChild(TEMPLATE.content.cloneNode(true));
 
-    this._preference = null;    // cached preference record
     this._open = false;
     this._authenticated = false; // true when signed in via OAuth proxy
     this._authPopup = null;      // reference to the OAuth popup window
@@ -598,6 +592,7 @@ class AtshareSelector extends HTMLElement {
     this._expandedProtocol = null;        // null or protocol ID string
     this._viewMode = 'default';           // 'default' | 'full'
     this._pendingFediverseClientId = null; // client awaiting instance input
+    this._clipboardTimeout = null;
 
     this._trigger = this.shadowRoot.querySelector('.trigger');
     this._popover = this.shadowRoot.querySelector('.popover');
@@ -702,7 +697,6 @@ class AtshareSelector extends HTMLElement {
     if (pdsPref) {
       const resolved = resolvePreference(pdsPref);
       if (resolved) {
-        this._preference = resolved;
         // Hydrate localStorage from PDS
         const localPref = {
           primaryNetwork: resolved.protocolId,
@@ -816,16 +810,15 @@ class AtshareSelector extends HTMLElement {
 
       // Click the button area (not chevron) to share
       btn.addEventListener('click', (e) => {
-        // Don't trigger share if they clicked the chevron
         if (e.target.closest('.proto-chevron')) return;
-        this._onProtocolSelect(protocol.id, displayClient);
+        this._handleClientShare(displayClient);
       });
 
       row.appendChild(btn);
 
       // Expanded client sub-list
       if (this._expandedProtocol === protocol.id) {
-        const clientListEl = this._renderClientList(protocol);
+        const clientListEl = this._renderClientList(protocol, localPref);
         row.appendChild(clientListEl);
       }
 
@@ -840,13 +833,13 @@ class AtshareSelector extends HTMLElement {
   /**
    * Render the client sub-list for an expanded protocol.
    * @param {object} protocol
+   * @param {object|null} localPref — current preference (passed to avoid redundant reads)
    * @returns {HTMLElement}
    */
-  _renderClientList(protocol) {
+  _renderClientList(protocol, localPref) {
     const wrap = document.createElement('div');
     wrap.className = 'client-list';
 
-    const localPref = this._getLocalPreference();
     const isPreferredProtocol = localPref?.primaryNetwork === protocol.id;
 
     for (const client of getClients(protocol.id)) {
@@ -878,7 +871,7 @@ class AtshareSelector extends HTMLElement {
         btn.appendChild(check);
       }
 
-      btn.addEventListener('click', () => this._onClientSelect(client, protocol));
+      btn.addEventListener('click', () => this._handleClientShare(client));
       wrap.appendChild(btn);
     }
 
@@ -960,7 +953,7 @@ class AtshareSelector extends HTMLElement {
           item.appendChild(check);
         }
 
-        item.addEventListener('click', () => this._onFullListSelect(client, protocol));
+        item.addEventListener('click', () => this._handleClientShare(client, () => this._hideFullList()));
         section.appendChild(item);
       }
 
@@ -990,65 +983,26 @@ class AtshareSelector extends HTMLElement {
   }
 
   /**
-   * Handle clicking a protocol button (not chevron). Share immediately using
-   * the preferred or default client.
+   * Shared handler for selecting a client from any view. Checks if the client
+   * needs an instance URL; if so, shows the input or shares with the stored one.
+   * @param {object} client
+   * @param {Function} [afterShare] — called after a successful share (e.g. hide full list)
    */
-  _onProtocolSelect(protocolId, displayClient) {
-    const clientId = displayClient.id;
-
-    // If a Fediverse client requires an instance and we don't have one stored,
-    // show the Mastodon instance input instead of sharing.
-    if (displayClient.requiresInstance) {
-      const storedInstance = this._getMastodonInstance();
-      if (storedInstance) {
-        this._share(clientId, { instance: storedInstance });
-      } else {
-        this._mastodonWrap.classList.add('visible');
-      }
-      return;
-    }
-
-    this._share(clientId);
-  }
-
-  /**
-   * Handle clicking a client in the expanded sub-list. Shares, saves as
-   * preferred, and collapses the sub-list.
-   */
-  _onClientSelect(client, protocol) {
+  _handleClientShare(client, afterShare) {
     if (client.requiresInstance) {
       const storedInstance = this._getMastodonInstance();
       if (storedInstance) {
         this._share(client.id, { instance: storedInstance });
+        afterShare?.();
       } else {
-        this._mastodonWrap.classList.add('visible');
-        // Store which client they wanted so _onMastodonGo uses the right one
-        this._pendingFediverseClientId = client.id;
-      }
-      return;
-    }
-    this._share(client.id);
-  }
-
-  /**
-   * Handle clicking a destination in the full list. Shares, saves, and
-   * returns to default view.
-   */
-  _onFullListSelect(client, protocol) {
-    if (client.requiresInstance) {
-      const storedInstance = this._getMastodonInstance();
-      if (storedInstance) {
-        this._share(client.id, { instance: storedInstance });
-        this._hideFullList();
-      } else {
-        this._hideFullList();
+        afterShare?.();
         this._mastodonWrap.classList.add('visible');
         this._pendingFediverseClientId = client.id;
       }
       return;
     }
     this._share(client.id);
-    this._hideFullList();
+    afterShare?.();
   }
 
   async _onClipboardCopy() {
@@ -1056,9 +1010,9 @@ class AtshareSelector extends HTMLElement {
       await navigator.clipboard.writeText(this.shareText);
       const btn = this.shadowRoot.querySelector('.clipboard-btn span');
       if (!btn) return;
-      const original = btn.textContent;
+      clearTimeout(this._clipboardTimeout);
       btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = original; }, 2000);
+      this._clipboardTimeout = setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 2000);
     } catch {}
   }
 
@@ -1087,7 +1041,7 @@ class AtshareSelector extends HTMLElement {
     const instance = this._mastodonInput.value.trim();
     if (!instance) return;
     const instanceUrl = instance.startsWith('http') ? instance : `https://${instance}`;
-    this._setMastodonInstance(instanceUrl);
+    this._prefillMastodonInput(instanceUrl);
     const clientId = this._pendingFediverseClientId || 'mastodon';
     this._pendingFediverseClientId = null;
     this._share(clientId, { instance: instanceUrl });
@@ -1121,9 +1075,6 @@ class AtshareSelector extends HTMLElement {
     try {
       localStorage.setItem('atshare.preference', JSON.stringify(localPref));
     } catch {}
-
-    // Update in-memory preference
-    this._preference = { protocolId: client.protocolId, clientId };
 
     // Write PDS-format preference (fire-and-forget) if authenticated
     const session = getSession();
@@ -1161,7 +1112,7 @@ class AtshareSelector extends HTMLElement {
     return pref?.mastodonInstance || null;
   }
 
-  _setMastodonInstance(instanceUrl) {
+  _prefillMastodonInput(instanceUrl) {
     // Pre-fill for next time
     this._mastodonInput.value = instanceUrl;
   }
@@ -1341,7 +1292,6 @@ class AtshareSelector extends HTMLElement {
       localStorage.removeItem('atshare.handle');
       localStorage.removeItem('atshare.preference');
     } catch {}
-    this._preference = null;
     this._renderNetworks();
     this._setSigninState('idle');
     this._signinHandleInput.value = '';

@@ -7,6 +7,9 @@
 
 import registry from '../destinations.json';
 
+// Legacy network name → protocol ID mapping
+const LEGACY_NETWORK_MAP = { bluesky: 'atproto', mastodon: 'activitypub' };
+
 // Build flat lookup maps at import time
 const _clientsById = new Map();
 const _clientsByDomain = new Map();
@@ -85,8 +88,7 @@ export function resolvePreference(pdsRecord) {
 
   const { primaryNetwork, networks } = pdsRecord;
 
-  const protocolMap = { bluesky: 'atproto', mastodon: 'activitypub' };
-  const protocolId = protocolMap[primaryNetwork] || primaryNetwork;
+  const protocolId = LEGACY_NETWORK_MAP[primaryNetwork] || primaryNetwork;
 
   if (!networks || networks.length === 0) {
     const defaultClient = getDefaultClient(protocolId);
