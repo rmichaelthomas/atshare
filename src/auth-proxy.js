@@ -9,7 +9,7 @@
  * Public preference reads use getPublicPreference() from pds.js directly.
  */
 
-const API = 'https://atshare.social/api';
+const API = 'https://atshare.social/atshare-api/api';
 
 let _did = null;
 

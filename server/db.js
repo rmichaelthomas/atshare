@@ -1,30 +1,44 @@
-import Database from 'better-sqlite3';
-import { mkdirSync } from 'fs';
+/**
+ * Simple JSON file-based store.
+ * Replaces SQLite for shared hosting where native modules aren't available.
+ * Data is small (a few OAuth sessions) so JSON is fine.
+ */
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
-const DB_PATH = process.env.DB_PATH || './data/atshare.db';
+const DATA_DIR = process.env.DATA_DIR || './data';
 
-// Ensure the data directory exists
-mkdirSync(dirname(DB_PATH), { recursive: true });
+mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new Database(DB_PATH);
+export class JsonStore {
+  constructor(name) {
+    this._path = `${DATA_DIR}/${name}.json`;
+    this._data = {};
+    if (existsSync(this._path)) {
+      try {
+        this._data = JSON.parse(readFileSync(this._path, 'utf-8'));
+      } catch {
+        this._data = {};
+      }
+    }
+  }
 
-// Enable WAL mode for better concurrent read performance
-db.pragma('journal_mode = WAL');
+  _save() {
+    writeFileSync(this._path, JSON.stringify(this._data, null, 2), 'utf-8');
+  }
 
-// Create tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS sessions (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at INTEGER DEFAULT (unixepoch())
-  );
+  get(key) {
+    return this._data[key];
+  }
 
-  CREATE TABLE IF NOT EXISTS states (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at INTEGER DEFAULT (unixepoch())
-  );
-`);
+  set(key, value) {
+    this._data[key] = value;
+    this._save();
+  }
 
-export default db;
+  del(key) {
+    delete this._data[key];
+    this._save();
+  }
+}

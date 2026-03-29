@@ -5,13 +5,13 @@
   "logo_uri": "https://atshare.social/logo.png",
   "tos_uri": "https://atshare.social/tos",
   "policy_uri": "https://atshare.social/privacy",
-  "redirect_uris": ["https://atshare.social/api/auth/callback"],
+  "redirect_uris": ["https://atshare.social/atshare-api/api/auth/callback"],
   "scope": "atproto",
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "token_endpoint_auth_method": "private_key_jwt",
   "token_endpoint_auth_signing_alg": "ES256",
-  "jwks_uri": "https://atshare.social/api/jwks",
+  "jwks_uri": "https://atshare.social/atshare-api/api/jwks",
   "application_type": "web",
   "dpop_bound_access_tokens": true
 }

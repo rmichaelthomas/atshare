@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
@@ -15,16 +14,19 @@ app.use('/api/*', cors({
   allowHeaders: ['Content-Type'],
 }));
 
-// Routes
-app.route('/api/auth', auth);
-app.route('/api/preference', preference);
+// cPanel preserves the full URL path (including /atshare-api prefix)
+const BASE = '/atshare-api/api';
 
-// JWKS at top level (client metadata points to /api/jwks)
+// Routes
+app.route(`${BASE}/auth`, auth);
+app.route(`${BASE}/preference`, preference);
+
+// JWKS
 import { getPublicJwks } from './oauth.js';
-app.get('/api/jwks', async (c) => c.json(await getPublicJwks()));
+app.get(`${BASE}/jwks`, async (c) => c.json(await getPublicJwks()));
 
 // Health check
-app.get('/api/health', (c) => c.json({ ok: true }));
+app.get(`${BASE}/health`, (c) => c.json({ ok: true }));
 
 // Start
 const port = Number(process.env.PORT) || 3001;

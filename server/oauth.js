@@ -43,7 +43,7 @@ export async function getOAuthClient() {
       logo_uri: `${PUBLIC_URL}/logo.png`,
       tos_uri: `${PUBLIC_URL}/tos`,
       policy_uri: `${PUBLIC_URL}/privacy`,
-      redirect_uris: [`${PUBLIC_URL}/api/auth/callback`],
+      redirect_uris: [`${PUBLIC_URL}/atshare-api/api/auth/callback`],
       scope: 'atproto',
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],

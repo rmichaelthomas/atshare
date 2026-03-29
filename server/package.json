@@ -10,8 +10,6 @@
   "dependencies": {
     "@atproto/oauth-client-node": "^0.3.0",
     "@hono/node-server": "^1.0.0",
-    "better-sqlite3": "^11.0.0",
-    "dotenv": "^16.0.0",
     "hono": "^4.0.0"
   }
 }
