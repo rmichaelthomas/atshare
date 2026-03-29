@@ -559,21 +559,24 @@ const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
  * @returns {string} HTML string
  */
 function renderClientIcon(client, color, size = 18) {
+  // Validate color is a hex value (defense-in-depth against malicious registry data)
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#888888';
+
   if (client.icon && ICONS[client.icon]) {
-    // Parse the SVG string and set fill
     let svg = ICONS[client.icon];
-    // Replace or add fill attribute on the root <svg> element
-    if (svg.includes('fill=')) {
-      svg = svg.replace(/fill="[^"]*"/, `fill="${color}"`);
-    } else {
-      svg = svg.replace('<svg', `<svg fill="${color}"`);
-    }
-    // Set dimensions
-    svg = svg.replace(/<svg/, `<svg width="${size}" height="${size}" style="display:block"`);
+    // Set fill, width, height on root <svg> element only (not child elements)
+    svg = svg.replace(/<svg([^>]*)>/, (match, attrs) => {
+      // Remove any existing fill/width/height from root attrs
+      let cleaned = attrs
+        .replace(/\s*fill="[^"]*"/g, '')
+        .replace(/\s*width="[^"]*"/g, '')
+        .replace(/\s*height="[^"]*"/g, '');
+      return `<svg${cleaned} fill="${safeColor}" width="${size}" height="${size}" style="display:block">`;
+    });
     return svg;
   }
   // Fallback: colored dot
-  return `<span style="display:inline-block;width:${Math.round(size * 0.45)}px;height:${Math.round(size * 0.45)}px;border-radius:50%;background:${color};"></span>`;
+  return `<span style="display:inline-block;width:${Math.round(size * 0.45)}px;height:${Math.round(size * 0.45)}px;border-radius:50%;background:${safeColor};"></span>`;
 }
 
 class AtshareSelector extends HTMLElement {
@@ -592,8 +595,9 @@ class AtshareSelector extends HTMLElement {
     this._authPopup = null;      // reference to the OAuth popup window
 
     // UI state for popover views
-    this._expandedProtocol = null; // null or protocol ID string
-    this._viewMode = 'default';    // 'default' | 'full'
+    this._expandedProtocol = null;        // null or protocol ID string
+    this._viewMode = 'default';           // 'default' | 'full'
+    this._pendingFediverseClientId = null; // client awaiting instance input
 
     this._trigger = this.shadowRoot.querySelector('.trigger');
     this._popover = this.shadowRoot.querySelector('.popover');
@@ -642,18 +646,23 @@ class AtshareSelector extends HTMLElement {
 
     this._moreLink.addEventListener('click', () => this._showFullList());
 
-    document.addEventListener('click', (e) => {
+    this._onDocumentClick = (e) => {
       // composedPath() pierces Shadow DOM — only close if click was outside this element
       if (!e.composedPath().includes(this)) {
         this._closePopover();
       }
-    }, { passive: true });
+    };
   }
 
   connectedCallback() {
+    document.addEventListener('click', this._onDocumentClick, { passive: true });
     this._render();
     this._tryRestoreSession();
     this._tryBackgroundPreferenceRead();
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener('click', this._onDocumentClick);
   }
 
   /**
