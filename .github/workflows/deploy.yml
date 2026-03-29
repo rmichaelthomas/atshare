@@ -48,7 +48,7 @@ jobs:
           # Use scp instead of sftp — scp reports errors clearly
           SCP_OPTS="-o StrictHostKeyChecking=no -o Port=${{ secrets.SFTP_PORT }} -i ~/.ssh/deploy_key"
           REMOTE="${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}"
-          DEST="/home/adjaxahy/public_html"
+          DEST="/home/adjaxahy/atshare.social"
 
           scp $SCP_OPTS deploy/index.html "${REMOTE}:${DEST}/index.html"
           scp $SCP_OPTS deploy/dist/atshare-selector.js "${REMOTE}:${DEST}/dist/atshare-selector.js"
