@@ -17,6 +17,15 @@ const configs = {
       },
     },
   },
+  proxy: {
+    // App build for the iframe proxy page — no dependencies, plain HTML+JS
+    build: {
+      outDir: 'dist/proxy',
+      rollupOptions: {
+        input: resolve(__dirname, 'public/proxy/index.html'),
+      },
+    },
+  },
   demo: {
     // App build for the demo site — bundles all dependencies
     build: {

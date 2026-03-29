@@ -11,7 +11,7 @@ app.use('/api/*', cors({
   origin: (origin) => origin || '*',
   credentials: true,
   allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type'],
+  allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // cPanel preserves the full URL path (including /atshare-api prefix)

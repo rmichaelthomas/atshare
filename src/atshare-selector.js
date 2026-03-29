@@ -13,7 +13,7 @@
 import { NETWORKS, buildIntentUrl } from './networks.js';
 import { getPublicPreference } from './pds.js';
 import { resolveIdentity } from './identity.js';
-import { getAuthUrl, checkSession, signOut, getSession, putPreference } from './auth-proxy.js';
+import { getAuthUrl, checkSession, signOut, getSession, putPreference, handleAuthCallback } from './auth-proxy.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -568,6 +568,7 @@ class AtshareSelector extends HTMLElement {
   /**
    * Sign in via OAuth popup.
    * Opens popup synchronously (avoids popup blockers), then fetches OAuth URL.
+   * The popup sends the session token back via postMessage (no third-party cookies needed).
    */
   async _onSignIn() {
     const handle = this._signinHandleInput.value.trim();
@@ -584,12 +585,15 @@ class AtshareSelector extends HTMLElement {
     this._setSigninState('waiting');
 
     try {
-      // Fetch OAuth URL from server (async — popup is already open)
+      // Fetch OAuth URL from server via iframe proxy (async — popup is already open)
       const url = await getAuthUrl(handle);
       popup.location.href = url;
 
-      // Wait for popup to close, then verify session
-      await this._waitForPopupClose(popup);
+      // Wait for the popup to send the session token via postMessage
+      const { sessionId, did } = await this._waitForAuthMessage(popup);
+
+      // Store the token in the iframe proxy for future API calls
+      await handleAuthCallback(sessionId, did);
 
       // Session established — save handle, load preference
       this._authenticated = true;
@@ -611,40 +615,55 @@ class AtshareSelector extends HTMLElement {
   }
 
   /**
-   * Poll for popup to close, then check for session.
+   * Wait for the OAuth popup to send back the session token via postMessage,
+   * or for the popup to close without sending (cancelled).
    * @param {Window} popup
-   * @returns {Promise<void>} resolves when session is confirmed
+   * @returns {Promise<{sessionId: string, did: string}>}
    */
-  _waitForPopupClose(popup) {
+  _waitForAuthMessage(popup) {
     return new Promise((resolve, reject) => {
-      const poll = setInterval(async () => {
+      let settled = false;
+
+      const onMessage = (e) => {
+        if (settled) return;
+        const msg = e.data;
+        if (!msg || msg.type !== 'atshare-auth-callback') return;
+        settled = true;
+        cleanup();
+        this._authPopup = null;
+        resolve({ sessionId: msg.sessionId, did: msg.did });
+      };
+
+      // Also poll for popup close (user closed it manually)
+      const poll = setInterval(() => {
+        if (settled) return;
         try {
           if (!popup.closed) return;
         } catch {
-          // cross-origin access error — popup is on different origin, keep waiting
-          return;
+          return; // cross-origin access error — keep waiting
         }
-        clearInterval(poll);
+        settled = true;
+        cleanup();
         this._authPopup = null;
-
-        try {
-          const session = await checkSession();
-          if (session.did) {
-            resolve();
-          } else {
-            reject(new Error('Sign-in cancelled'));
-          }
-        } catch {
-          reject(new Error('Sign-in cancelled'));
-        }
-      }, 1000);
+        reject(new Error('Sign-in cancelled'));
+      }, 500);
 
       // Safety timeout
-      setTimeout(() => {
-        clearInterval(poll);
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
         this._authPopup = null;
         reject(new Error('Sign-in timed out'));
       }, 120000);
+
+      const cleanup = () => {
+        window.removeEventListener('message', onMessage);
+        clearInterval(poll);
+        clearTimeout(timeout);
+      };
+
+      window.addEventListener('message', onMessage);
     });
   }
 

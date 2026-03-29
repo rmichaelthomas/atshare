@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>atShare Proxy</title>
+  <meta charset="utf-8">
+</head>
+<body>
+<script>
+/**
+ * atShare iframe proxy — hosted on atshare.social, embedded as a hidden
+ * iframe on third-party sites. Relays API calls from the component to the
+ * server in a first-party context, avoiding third-party cookie restrictions.
+ *
+ * Communication protocol (postMessage):
+ *   Parent → Iframe:  { type: 'atshare-proxy-request', id, action, data }
+ *   Iframe → Parent:  { type: 'atshare-proxy-response', id, payload: { data } | { error } }
+ *   Iframe → Parent:  { type: 'atshare-proxy-ready' }
+ */
+
+const API = '/atshare-api/api';
+
+// Session token stored in this iframe's (partitioned) localStorage.
+// The token is passed in from the component after the popup OAuth flow.
+let sessionToken = null;
+try { sessionToken = localStorage.getItem('atshare_token'); } catch {}
+
+window.addEventListener('message', async (e) => {
+  const msg = e.data;
+  if (!msg || msg.type !== 'atshare-proxy-request') return;
+
+  const { id, action, data } = msg;
+
+  try {
+    let result;
+    switch (action) {
+      case 'getAuthUrl': {
+        const params = new URLSearchParams({
+          handle: data.handle,
+          returnUrl: data.returnUrl || '',
+        });
+        result = await proxyFetch(`${API}/auth/login?${params}`);
+        break;
+      }
+      case 'checkSession':
+        result = await proxyFetch(`${API}/auth/session`);
+        break;
+
+      case 'signOut':
+        result = await proxyFetch(`${API}/auth/logout`, { method: 'POST' });
+        sessionToken = null;
+        try { localStorage.removeItem('atshare_token'); } catch {}
+        break;
+
+      case 'putPreference':
+        result = await proxyFetch(`${API}/preference`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        break;
+
+      case 'storeToken':
+        sessionToken = data.token;
+        try { localStorage.setItem('atshare_token', data.token); } catch {}
+        result = { ok: true };
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${action}`);
+    }
+
+    e.source.postMessage(
+      { type: 'atshare-proxy-response', id, payload: { data: result } },
+      e.origin
+    );
+  } catch (err) {
+    e.source.postMessage(
+      { type: 'atshare-proxy-response', id, payload: { error: err.message } },
+      e.origin
+    );
+  }
+});
+
+async function proxyFetch(url, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
+  }
+  const res = await fetch(url, { ...opts, headers, credentials: 'include' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return text; }
+}
+
+// Signal ready to the parent
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'atshare-proxy-ready' }, '*');
+}
+</script>
+</body>
+</html>

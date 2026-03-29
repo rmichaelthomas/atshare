@@ -9,7 +9,8 @@
     "build": "vite build",
     "build:callback": "BUILD_TARGET=callback vite build",
     "build:demo": "BUILD_TARGET=demo vite build",
-    "build:all": "npm run build && npm run build:callback && npm run build:demo",
+    "build:proxy": "BUILD_TARGET=proxy vite build",
+    "build:all": "npm run build && npm run build:callback && npm run build:proxy && npm run build:demo",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
