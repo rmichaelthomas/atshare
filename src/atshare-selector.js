@@ -49,20 +49,20 @@ TEMPLATE.innerHTML = `
     /* --- Orbit --- */
     .trigger-orbit {
       position: absolute;
-      width: calc(100% + 14px);
-      height: calc(100% + 14px);
-      top: -7px;
-      left: -7px;
+      width: calc(100% + 24px);
+      height: calc(100% + 24px);
+      top: -12px;
+      left: -12px;
       pointer-events: none;
       z-index: 0;
       opacity: var(--atshare-orbit, 1);
     }
     .orbit-at {
       font-family: inherit;
-      font-size: 9px;
+      font-size: 12px;
       font-weight: 700;
       fill: var(--atshare-accent, #64DFDF);
-      opacity: 0.3;
+      opacity: 0.7;
       transition: opacity 400ms ease;
     }
     @keyframes atshare-orbit-spin {
@@ -90,14 +90,14 @@ TEMPLATE.innerHTML = `
       position: relative;
       display: inline-flex;
       align-items: center;
-      height: 42px;
-      padding: 0 18px 0 14px;
+      height: 48px;
+      padding: 0 22px 0 18px;
       border: 1px solid var(--atshare-border, #e2e8f0);
       border-radius: var(--atshare-radius, 10px);
       background: var(--atshare-bg, #ffffff);
       color: var(--atshare-color, #0f172a);
-      font-size: var(--atshare-font-size, 14px);
-      font-weight: 500;
+      font-size: var(--atshare-font-size, 16px);
+      font-weight: 600;
       cursor: pointer;
       user-select: none;
       overflow: hidden;
@@ -111,7 +111,7 @@ TEMPLATE.innerHTML = `
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 100%;
-      background: var(--atshare-accent-dark, #1A1A2E);
+      background: var(--atshare-accent, #64DFDF);
       border-radius: inherit;
       transform: translateX(-100%);
       transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -122,12 +122,12 @@ TEMPLATE.innerHTML = `
     .trigger-at {
       position: absolute;
       left: 0; top: 0; bottom: 0;
-      width: 38px;
+      width: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      font-size: 17px;
+      color: var(--atshare-accent-text, #1A1A2E);
+      font-size: 20px;
       font-weight: 700;
       transform: translateX(-100%);
       transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -148,9 +148,9 @@ TEMPLATE.innerHTML = `
 
     /* Hover state */
     .trigger:hover {
-      border-color: var(--atshare-accent-dark, #1A1A2E);
-      color: #fff;
-      padding-left: 48px;
+      border-color: var(--atshare-accent, #64DFDF);
+      color: var(--atshare-accent-text, #1A1A2E);
+      padding-left: 54px;
     }
     .trigger:hover .trigger-fill {
       transform: translateX(0);

@@ -45,7 +45,7 @@ atshare-selector {
   --atshare-color: #f8fafc;
   --atshare-border: #334155;
   --atshare-accent: #64DFDF;
-  --atshare-accent-dark: #1A1A2E;
+  --atshare-accent-text: #1A1A2E;
   --atshare-orbit: 1;
   --atshare-radius: 10px;
   --atshare-font-size: 14px;
