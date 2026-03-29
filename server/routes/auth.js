@@ -35,7 +35,7 @@ auth.get('/callback', async (c) => {
   const params = new URLSearchParams(c.req.url.split('?')[1] || '');
 
   const client = await getOAuthClient();
-  const { session, state: returnUrl } = await client.callback(params);
+  const { session } = await client.callback(params);
 
   // Create a session cookie
   const sessionId = crypto.randomUUID();
@@ -51,13 +51,8 @@ auth.get('/callback', async (c) => {
     'Max-Age=2592000', // 30 days
   ].join('; '));
 
-  // Redirect popup back to the embedding site
-  if (returnUrl) {
-    return c.redirect(`${returnUrl}#atshare-auth=success`);
-  }
-
-  // Fallback: show success page (same-origin case)
-  return c.html('<p>Signed in. You can close this window.</p><script>window.close()</script>');
+  // Close the popup — cookie is set, the parent page will detect it via checkSession()
+  return c.html('<!DOCTYPE html><html><body><p>Signed in. You can close this window.</p><script>window.close()</script></body></html>');
 });
 
 /**

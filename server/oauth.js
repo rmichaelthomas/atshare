@@ -44,7 +44,7 @@ export async function getOAuthClient() {
       tos_uri: `${PUBLIC_URL}/tos`,
       policy_uri: `${PUBLIC_URL}/privacy`,
       redirect_uris: [`${PUBLIC_URL}/atshare-api/api/auth/callback`],
-      scope: 'atproto',
+      scope: 'atproto transition:generic',
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
       token_endpoint_auth_method: 'private_key_jwt',
