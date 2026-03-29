@@ -35,5 +35,10 @@
     "share-button",
     "social-sharing"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://atshare.social",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rmichaelthomas/atshare.git"
+  }
 }
