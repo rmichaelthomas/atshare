@@ -38,9 +38,11 @@ describe('getDefaultClient', () => {
     expect(client.default).toBe(true);
   });
 
-  it('returns first client if no default is marked', () => {
-    const client = getDefaultClient('atproto');
+  it('returns first client when called with a protocol where no default is marked', () => {
+    // 'other' protocol has no client with default: true
+    const client = getDefaultClient('other');
     expect(client).toBeDefined();
+    expect(client.id).toBe('linkedin'); // first client in 'other'
   });
 });
 
@@ -135,6 +137,20 @@ describe('resolvePreference', () => {
       primaryNetwork: 'bluesky',
       networks: [{ type: 'atproto', appView: 'https://unknown-client.example' }],
     };
+    const result = resolvePreference(pdsRecord);
+    expect(result.protocolId).toBe('atproto');
+    expect(result.clientId).toBe('bsky');
+  });
+
+  it('falls back to default when networks array is empty', () => {
+    const pdsRecord = { primaryNetwork: 'bluesky', networks: [] };
+    const result = resolvePreference(pdsRecord);
+    expect(result.protocolId).toBe('atproto');
+    expect(result.clientId).toBe('bsky');
+  });
+
+  it('falls back to default when networks array is missing', () => {
+    const pdsRecord = { primaryNetwork: 'bluesky' };
     const result = resolvePreference(pdsRecord);
     expect(result.protocolId).toBe('atproto');
     expect(result.clientId).toBe('bsky');
