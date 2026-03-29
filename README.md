@@ -1,6 +1,6 @@
 # atShare
 
-Universal share selector for [AT Protocol](https://atproto.com) and [ActivityPub](https://activitypub.rocks) networks. Drop a single web component onto any page and give your readers one-click sharing to Bluesky and Mastodon.
+Universal share selector for the open social web. Drop a single web component onto any page and give your readers one-click sharing to Bluesky (and other [AT Protocol](https://atproto.com) clients), Mastodon (and the [Fediverse](https://activitypub.rocks)), LinkedIn, X, Threads, and more — with a clipboard fallback for everything else.
 
 **[atshare.social](https://atshare.social)** | **[Live demo](https://atshare.social/demo/)**
 
@@ -18,11 +18,13 @@ Universal share selector for [AT Protocol](https://atproto.com) and [ActivityPub
 ## Features
 
 - **Zero dependencies in the embed** -- a single `<script>` tag, no framework required
-- **Bluesky + Mastodon** sharing out of the box
-- **Preference memory** -- share once and your preferred network is remembered locally; sign in with your Bluesky handle to sync your preference across every site running atShare
+- **Universal destinations** -- ATProto clients (Bluesky, deck.blue, Skeet, Kite, Langit), Fediverse (Mastodon, Misskey), traditional networks (LinkedIn, X, Threads), and clipboard
+- **Community-contributed** -- destinations defined in a JSON registry that anyone can extend via PR
+- **Client choice** -- ATProto users pick their preferred client (not just bsky.app); Fediverse users pick their instance
+- **Preference memory** -- share once and your preferred destination is remembered locally; sign in with your ATProto handle to sync across every site running atShare
 - **Themeable** -- CSS custom properties for colors, borders, radius, font size
 - **Shadow DOM** -- styles don't leak in or out
-- **Lightweight** -- ~19 KB (ES module)
+- **Lightweight** -- ~11 KB gzipped (ES module)
 
 ## Attributes
 
@@ -50,11 +52,11 @@ atshare-selector {
 
 ## How Preferences Work
 
-atShare remembers a user's preferred network across every site that embeds it -- no account on your site required.
+atShare remembers a user's preferred destination across every site that embeds it -- no account on your site required.
 
-**Local (automatic):** When a user shares to a network, their choice is saved in `localStorage`. On return visits, that network gets a checkmark.
+**Local (automatic):** When a user shares, their chosen destination (including specific ATProto client) is saved in `localStorage`. On return visits, that destination gets a checkmark and one-click access.
 
-**Cross-site (sign in):** Users click "Sign in" in the selector, enter their Bluesky handle, and complete a one-time OAuth flow via popup. This writes a `social.atshare.preference` record to their PDS. Any site running atShare can read it back and show the checkmark -- the preference follows the user across the web.
+**Cross-site (sign in):** Users click "Sign in" in the selector, enter their ATProto handle, and complete a one-time OAuth flow via popup. This writes a `social.atshare.preference` record to their PDS. Any site running atShare can read it back -- the preference follows the user across the web.
 
 **Cross-origin architecture:** The component uses a hidden iframe proxy on atshare.social to relay authenticated API calls via `postMessage`. This avoids third-party cookie restrictions -- the iframe makes same-origin requests while the OAuth popup sends the session token back to the embedding page via `postMessage`.
 
@@ -73,21 +75,27 @@ npm run build:demo # Demo site build (bundles all deps)
 ## Project Structure
 
 ```
+destinations.json         Community-contributed destination registry
+destinations.schema.json  JSON Schema for registry validation
 src/
-  atshare-selector.js   Web component
-  networks.js           Network definitions (Bluesky, Mastodon)
-  identity.js           Handle/DID/PDS resolution
-  pds.js                Preference record read/write (public)
-  auth-proxy.js         Server-backed OAuth proxy client
-  iframe-proxy.js       Cross-origin iframe proxy (postMessage relay)
+  atshare-selector.js     Web component (selector UI, preference, auth)
+  destinations.js         Registry lookup, URL building, preference resolution
+  icons/                  SVG brand icons (bluesky, mastodon, linkedin, x, threads)
+  identity.js             Handle/DID/PDS resolution
+  pds.js                  Preference record read/write (public)
+  auth-proxy.js           Server-backed OAuth proxy client
+  iframe-proxy.js         Cross-origin iframe proxy (postMessage relay)
+tests/
+  destinations.test.js    Destinations module tests
+  preference-migration.test.js  Preference migration tests
 public/
-  proxy/index.html      Iframe proxy page hosted on atshare.social
-index.html              Landing page (atshare.social root)
+  proxy/index.html        Iframe proxy page hosted on atshare.social
+index.html                Landing page (atshare.social root)
 server/
-  index.js              Hono API server
-  oauth.js              NodeOAuthClient singleton
-  routes/auth.js        OAuth login/callback/session/logout
-  routes/preference.js  Preference read/write via PDS
+  index.js                Hono API server
+  oauth.js                NodeOAuthClient singleton
+  routes/auth.js          OAuth login/callback/session/logout
+  routes/preference.js    Preference read/write via PDS
 ```
 
 ## License

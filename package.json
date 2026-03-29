@@ -29,7 +29,10 @@
     "share",
     "web-component",
     "bluesky",
-    "mastodon"
+    "mastodon",
+    "fediverse",
+    "share-button",
+    "social-sharing"
   ],
   "license": "MIT"
 }
