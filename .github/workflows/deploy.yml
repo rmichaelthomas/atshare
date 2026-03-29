@@ -36,14 +36,20 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SFTP_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          sftp -o StrictHostKeyChecking=no -o Port=${{ secrets.SFTP_PORT }} -i ~/.ssh/deploy_key -b - ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} <<'SFTP'
-          -mkdir /home/adjaxahy/public_html/dist
-          -mkdir /home/adjaxahy/public_html/demo
-          cd /home/adjaxahy/public_html
-          put deploy/index.html index.html
-          put deploy/dist/atshare-selector.js dist/atshare-selector.js
-          put deploy/dist/atshare-selector.umd.cjs dist/atshare-selector.umd.cjs
-          put deploy/demo/index.html demo/index.html
-          bye
-          SFTP
+
+          # Use scp instead of sftp — scp reports errors clearly
+          SCP_OPTS="-o StrictHostKeyChecking=no -o Port=${{ secrets.SFTP_PORT }} -i ~/.ssh/deploy_key"
+          REMOTE="${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }}"
+          DEST="/home/adjaxahy/public_html"
+
+          scp $SCP_OPTS deploy/index.html "${REMOTE}:${DEST}/index.html"
+          scp $SCP_OPTS deploy/dist/atshare-selector.js "${REMOTE}:${DEST}/dist/atshare-selector.js"
+          scp $SCP_OPTS deploy/dist/atshare-selector.umd.cjs "${REMOTE}:${DEST}/dist/atshare-selector.umd.cjs"
+          scp $SCP_OPTS deploy/demo/index.html "${REMOTE}:${DEST}/demo/index.html"
+
+          echo "Deploy complete. Verifying..."
+
+          # Verify files were written by checking remote timestamps
+          ssh $SCP_OPTS "${REMOTE}" "ls -la ${DEST}/index.html ${DEST}/dist/atshare-selector.js"
+
           rm ~/.ssh/deploy_key
