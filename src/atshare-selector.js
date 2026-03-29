@@ -10,7 +10,16 @@
  *   <atshare-selector url="https://example.com/post/123" text="Check this out"></atshare-selector>
  */
 
-import { NETWORKS, buildIntentUrl } from './networks.js';
+import {
+  getProtocols,
+  getClients,
+  getDefaultClient,
+  getClientById,
+  getClientByDomain,
+  buildIntentUrl,
+  resolvePreference,
+  migrateLocalPreference,
+} from './destinations.js';
 import { getPublicPreference } from './pds.js';
 import { resolveIdentity } from './identity.js';
 import { getAuthUrl, checkSession, signOut, getSession, putPreference, handleAuthCallback } from './auth-proxy.js';
@@ -397,9 +406,19 @@ class AtshareSelector extends HTMLElement {
    */
   async _loadPreferenceForHandle(handle) {
     const { did, pdsEndpoint } = await resolveIdentity(handle);
-    const pref = await getPublicPreference(pdsEndpoint, did);
-    if (pref) {
-      this._preference = pref;
+    const pdsPref = await getPublicPreference(pdsEndpoint, did);
+    if (pdsPref) {
+      const resolved = resolvePreference(pdsPref);
+      if (resolved) {
+        this._preference = resolved;
+        // Hydrate localStorage from PDS
+        const localPref = {
+          primaryNetwork: resolved.protocolId,
+          preferredClient: resolved.clientId,
+        };
+        if (resolved.instance) localPref.mastodonInstance = resolved.instance;
+        try { localStorage.setItem('atshare.preference', JSON.stringify(localPref)); } catch {}
+      }
       this._renderNetworks();
     }
   }
@@ -427,15 +446,19 @@ class AtshareSelector extends HTMLElement {
 
   _renderNetworks() {
     this._networkList.innerHTML = '';
-    for (const network of NETWORKS) {
+    for (const protocol of getProtocols()) {
+      const defaultClient = getDefaultClient(protocol.id);
+      if (!defaultClient) continue;
       const btn = document.createElement('button');
       btn.className = 'network-btn';
-      btn.dataset.networkId = network.id;
-      if (this._preference?.primaryNetwork === network.id) {
+      // Use legacy network IDs for click handling (bluesky/mastodon)
+      const networkId = defaultClient.id === 'bsky' ? 'bluesky' : defaultClient.id;
+      btn.dataset.networkId = networkId;
+      if (this._preference?.protocolId === protocol.id) {
         btn.classList.add('preferred');
       }
-      btn.textContent = network.label;
-      btn.addEventListener('click', () => this._onNetworkSelect(network.id));
+      btn.textContent = defaultClient.name;
+      btn.addEventListener('click', () => this._onNetworkSelect(networkId));
       this._networkList.appendChild(btn);
     }
   }
@@ -457,13 +480,19 @@ class AtshareSelector extends HTMLElement {
 
   _onNetworkSelect(networkId) {
     if (networkId === 'mastodon') {
-      // Check if we have a stored instance
       const storedInstance = this._getMastodonInstance();
       if (storedInstance) {
-        this._share('mastodon', { mastodonInstance: storedInstance });
+        this._share('mastodon', { instance: storedInstance });
       } else {
         this._mastodonWrap.classList.add('visible');
       }
+      return;
+    }
+    // For bluesky, use the preferred client or default
+    if (networkId === 'bluesky') {
+      const pref = this._getLocalPreference();
+      const clientId = (pref?.primaryNetwork === 'atproto' && pref?.preferredClient) || 'bsky';
+      this._share(clientId);
       return;
     }
     this._share(networkId);
@@ -472,53 +501,73 @@ class AtshareSelector extends HTMLElement {
   _onMastodonGo() {
     const instance = this._mastodonInput.value.trim();
     if (!instance) return;
-    // Normalize instance URL
     const instanceUrl = instance.startsWith('http') ? instance : `https://${instance}`;
     this._setMastodonInstance(instanceUrl);
-    this._share('mastodon', { mastodonInstance: instanceUrl });
+    this._share('mastodon', { instance: instanceUrl });
   }
 
-  _share(networkId, opts = {}) {
-    const intentUrl = buildIntentUrl(networkId, this.shareText, opts);
+  _share(clientId, opts = {}) {
+    const intentUrl = buildIntentUrl(clientId, {
+      text: this.shareText,
+      url: this.shareUrl,
+      title: this.getAttribute('title') || '',
+      instance: opts.instance,
+    });
     window.open(intentUrl, '_blank', 'noopener,noreferrer');
     this._closePopover();
-
-    // Persist preference (PDS if authenticated, localStorage always)
-    this._persistPreference(networkId, opts);
+    this._persistPreference(clientId, opts);
   }
 
-  _persistPreference(networkId, opts) {
-    const pref = {
-      primaryNetwork: networkId,
-      networks: this._buildNetworksArray(networkId, opts),
+  _persistPreference(clientId, opts = {}) {
+    const client = getClientById(clientId);
+    if (!client) return;
+
+    // Write new flat format to localStorage
+    const localPref = {
+      primaryNetwork: client.protocolId,
+      preferredClient: clientId,
     };
+    if (opts.instance) {
+      localPref.mastodonInstance = opts.instance;
+    }
     try {
-      localStorage.setItem('atshare.preference', JSON.stringify(pref));
+      localStorage.setItem('atshare.preference', JSON.stringify(localPref));
     } catch {}
-    // Write to PDS via server proxy if authenticated (fire-and-forget)
+
+    // Write PDS-format preference (fire-and-forget) if authenticated
     const session = getSession();
     if (session) {
-      putPreference(session.sub, pref).catch(() => {});
+      const pdsPref = {
+        primaryNetwork: client.protocolId === 'atproto' ? 'bluesky' : 'mastodon',
+        networks: [],
+      };
+      if (client.protocolId === 'atproto') {
+        pdsPref.networks.push({ type: 'atproto', appView: `https://${client.domain || 'bsky.app'}` });
+      } else if (opts.instance) {
+        pdsPref.networks.push({ type: 'activitypub', instance: opts.instance });
+      }
+      putPreference(session.sub, pdsPref).catch(() => {});
     }
   }
 
-  _buildNetworksArray(primaryNetworkId, opts) {
-    const networks = [];
-    if (primaryNetworkId === 'bluesky') {
-      networks.push({ type: 'atproto', appView: 'https://bsky.app' });
-    } else if (primaryNetworkId === 'mastodon' && opts.mastodonInstance) {
-      networks.push({ type: 'activitypub', instance: opts.mastodonInstance });
+  _getLocalPreference() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('atshare.preference') || 'null');
+      if (!raw) return null;
+      const migrated = migrateLocalPreference(raw);
+      // Write back migrated format if it changed
+      if (migrated && raw.networks) {
+        localStorage.setItem('atshare.preference', JSON.stringify(migrated));
+      }
+      return migrated;
+    } catch {
+      return null;
     }
-    return networks;
   }
 
   _getMastodonInstance() {
-    try {
-      const pref = JSON.parse(localStorage.getItem('atshare.preference') || 'null');
-      return pref?.networks?.find((n) => n.type === 'activitypub')?.instance || null;
-    } catch (_) {
-      return null;
-    }
+    const pref = this._getLocalPreference();
+    return pref?.mastodonInstance || null;
   }
 
   _setMastodonInstance(instanceUrl) {
