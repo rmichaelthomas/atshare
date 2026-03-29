@@ -1,0 +1,17 @@
+# Cache-Control headers
+<IfModule mod_headers.c>
+  # JS component bundles — 1 day cache
+  <FilesMatch "\.(js|cjs)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+
+  # Static assets (images, icons) — 1 week cache
+  <FilesMatch "\.(png|svg|ico)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+
+  # HTML pages — always revalidate
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
