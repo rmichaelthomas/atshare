@@ -1,0 +1,92 @@
+{
+  "$schema": "./destinations.schema.json",
+  "protocols": [
+    {
+      "id": "atproto",
+      "label": "AT Protocol",
+      "color": "#0085ff",
+      "clients": [
+        {
+          "id": "bsky",
+          "name": "Bluesky",
+          "domain": "bsky.app",
+          "intentUrl": "https://bsky.app/intent/compose?text={text}",
+          "icon": "bluesky.svg",
+          "default": true
+        },
+        {
+          "id": "deckblue",
+          "name": "deck.blue",
+          "domain": "deck.blue",
+          "intentUrl": "https://deck.blue/intent/compose?text={text}"
+        },
+        {
+          "id": "skeet",
+          "name": "Skeet",
+          "domain": "skeetapp.com",
+          "intentUrl": "https://skeetapp.com/intent/compose?text={text}"
+        },
+        {
+          "id": "kite",
+          "name": "Kite",
+          "domain": "kite.blue",
+          "intentUrl": "https://kite.blue/intent/compose?text={text}"
+        },
+        {
+          "id": "langit",
+          "name": "Langit",
+          "domain": "langit.pages.dev",
+          "intentUrl": "https://langit.pages.dev/intent/compose?text={text}"
+        }
+      ]
+    },
+    {
+      "id": "activitypub",
+      "label": "Fediverse",
+      "color": "#6364ff",
+      "clients": [
+        {
+          "id": "mastodon",
+          "name": "Mastodon",
+          "intentUrl": "{instance}/share?text={text}",
+          "requiresInstance": true,
+          "default": true
+        },
+        {
+          "id": "misskey",
+          "name": "Misskey",
+          "intentUrl": "{instance}/share?text={text}",
+          "requiresInstance": true
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": "Other Networks",
+      "color": "#888888",
+      "clients": [
+        {
+          "id": "linkedin",
+          "name": "LinkedIn",
+          "domain": "linkedin.com",
+          "intentUrl": "https://www.linkedin.com/sharing/share-offsite/?url={url}",
+          "icon": "linkedin.svg"
+        },
+        {
+          "id": "x",
+          "name": "X / Twitter",
+          "domain": "x.com",
+          "intentUrl": "https://x.com/intent/tweet?text={text}&url={url}",
+          "icon": "x.svg"
+        },
+        {
+          "id": "threads",
+          "name": "Threads",
+          "domain": "threads.net",
+          "intentUrl": "https://www.threads.net/intent/post?text={text}",
+          "icon": "threads.svg"
+        }
+      ]
+    }
+  ]
+}
