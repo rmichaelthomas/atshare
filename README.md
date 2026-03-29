@@ -2,7 +2,7 @@
 
 Universal share selector for [AT Protocol](https://atproto.com) and [ActivityPub](https://activitypub.rocks) networks. Drop a single web component onto any page and give your readers one-click sharing to Bluesky and Mastodon.
 
-**[Live demo](https://atshare.social/demo/)**
+**[atshare.social](https://atshare.social)** | **[Live demo](https://atshare.social/demo/)**
 
 ## Quick Start
 
@@ -82,6 +82,7 @@ src/
   iframe-proxy.js       Cross-origin iframe proxy (postMessage relay)
 public/
   proxy/index.html      Iframe proxy page hosted on atshare.social
+index.html              Landing page (atshare.social root)
 server/
   index.js              Hono API server
   oauth.js              NodeOAuthClient singleton

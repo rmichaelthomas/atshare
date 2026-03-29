@@ -22,9 +22,14 @@ All authenticated API calls route through a hidden iframe proxy on atshare.socia
 
 Files: `src/iframe-proxy.js` (client), `public/proxy/index.html` (proxy page), updated `src/auth-proxy.js`.
 
+### Landing Page — Done
+
+Landing page at atshare.social root with a "Plain English / Developer" mode switcher. Plain English mode explains the value prop for non-technical users (bloggers, content creators). Developer mode shows code snippets, attributes table, CSS custom properties reference, and architecture details. Both modes share the live interactive component demos and theming showcase.
+
 ### Next Up
 
-- **Landing page** — atshare.social home page with docs and live demo
+- **npm publish** — publish `@atshare/selector` to npm
+- **First integration** — replace Recto's "Share to Bluesky" button with atShare
 
 ---
 
@@ -40,7 +45,7 @@ An identity card component that displays a user's cross-network presence:
 
 - **npm package** -- publish `@atshare/selector` to npm for `npm install` usage
 - **CDN** -- host the built component on a CDN (or atshare.social itself) for `<script>` tag embedding
-- **Landing page** -- atshare.social home page with docs, live demo, and integration guide
+- ~~**Landing page**~~ -- done (atshare.social root with mode switcher)
 
 ## Future Ideas
 
