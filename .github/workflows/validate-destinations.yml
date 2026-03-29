@@ -1,0 +1,61 @@
+name: Validate Destinations
+on:
+  pull_request:
+    paths:
+      - 'destinations.json'
+      - 'src/icons/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate JSON schema
+        run: |
+          node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('destinations.json', 'utf8'));
+            const ids = new Set();
+            let errors = 0;
+            for (const protocol of data.protocols) {
+              if (!protocol.id || !protocol.label || !protocol.color || !protocol.clients?.length) {
+                console.error('Invalid protocol:', protocol.id);
+                errors++;
+              }
+              if (!/^#[0-9a-fA-F]{6}$/.test(protocol.color)) {
+                console.error('Invalid color for', protocol.id, ':', protocol.color);
+                errors++;
+              }
+              for (const client of protocol.clients) {
+                if (!client.id || !client.name || !client.intentUrl) {
+                  console.error('Invalid client:', client.id);
+                  errors++;
+                }
+                if (ids.has(client.id)) {
+                  console.error('Duplicate client id:', client.id);
+                  errors++;
+                }
+                ids.add(client.id);
+                if (!client.intentUrl.startsWith('https://') && !client.intentUrl.startsWith('{instance}')) {
+                  console.error('Non-HTTPS intent URL for', client.id, ':', client.intentUrl);
+                  errors++;
+                }
+                if (client.domain && client.intentUrl.startsWith('https://')) {
+                  const urlDomain = new URL(client.intentUrl.replace(/\{[^}]+\}/g, 'x')).hostname;
+                  if (!urlDomain.endsWith(client.domain)) {
+                    console.error('Domain mismatch for', client.id, ':', client.domain, 'vs', urlDomain);
+                    errors++;
+                  }
+                }
+                if (client.icon && !fs.existsSync('src/icons/' + client.icon)) {
+                  console.error('Missing icon for', client.id, ':', client.icon);
+                  errors++;
+                }
+              }
+            }
+            if (errors) { console.error(errors, 'error(s) found'); process.exit(1); }
+            console.log('Validation passed:', ids.size, 'clients across', data.protocols.length, 'protocols');
+          "
