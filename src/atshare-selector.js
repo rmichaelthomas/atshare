@@ -46,27 +46,123 @@ TEMPLATE.innerHTML = `
       font-family: inherit;
     }
 
+    /* --- Orbit --- */
+    .trigger-orbit {
+      position: absolute;
+      width: calc(100% + 24px);
+      height: calc(100% + 24px);
+      top: -12px;
+      left: -12px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: var(--atshare-orbit, 1);
+    }
+    .orbit-at {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      fill: var(--atshare-accent, #64DFDF);
+      opacity: 0.7;
+      transition: opacity 400ms ease;
+    }
+    @keyframes atshare-orbit-spin {
+      to { transform: rotate(360deg); }
+    }
+    .orbit-group {
+      transform-origin: 50% 50%;
+      animation: atshare-orbit-spin 5s linear infinite;
+    }
+    :host(:hover) .orbit-at {
+      opacity: 0;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .orbit-group {
+        animation: none;
+      }
+      .trigger-fill,
+      .trigger-at {
+        transition: none !important;
+      }
+    }
+
+    /* --- Trigger button --- */
     .trigger {
+      position: relative;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
+      height: 48px;
+      padding: 0 22px 0 18px;
       border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: var(--atshare-radius, 6px);
+      border-radius: var(--atshare-radius, 10px);
       background: var(--atshare-bg, #ffffff);
       color: var(--atshare-color, #0f172a);
-      font-size: var(--atshare-font-size, 14px);
+      font-size: var(--atshare-font-size, 16px);
+      font-weight: 600;
       cursor: pointer;
       user-select: none;
-      transition: background 0.15s;
+      overflow: hidden;
+      transition: border-color 250ms ease,
+                  color 220ms ease 100ms,
+                  padding-left 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
+
+    /* Fill background */
+    .trigger-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 100%;
+      background: var(--atshare-accent, #64DFDF);
+      border-radius: inherit;
+      transform: translateX(-100%);
+      transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 0;
+    }
+
+    /* @ panel */
+    .trigger-at {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--atshare-accent-text, #1A1A2E);
+      font-size: 20px;
+      font-weight: 700;
+      transform: translateX(-100%);
+      transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1;
+    }
+
+    /* Label */
+    .label-text {
+      position: relative;
+      z-index: 1;
+    }
+    .label-default {
+      display: inline;
+    }
+    .label-hover {
+      display: none;
+    }
+
+    /* Hover state */
     .trigger:hover {
-      background: var(--atshare-bg-hover, #f8fafc);
+      border-color: var(--atshare-accent, #64DFDF);
+      color: var(--atshare-accent-text, #1A1A2E);
+      padding-left: 54px;
     }
-    .trigger svg {
-      width: 15px;
-      height: 15px;
-      flex-shrink: 0;
+    .trigger:hover .trigger-fill {
+      transform: translateX(0);
+    }
+    .trigger:hover .trigger-at {
+      transform: translateX(0);
+    }
+    .trigger:hover .label-default {
+      display: none;
+    }
+    .trigger:hover .label-hover {
+      display: inline;
     }
 
     .popover {
@@ -354,7 +450,7 @@ TEMPLATE.innerHTML = `
       padding: 5px 12px;
       border: none;
       border-radius: 4px;
-      background: var(--atshare-accent, #1d4ed8);
+      background: var(--atshare-accent, #64DFDF);
       color: #fff;
       font-size: 13px;
       cursor: pointer;
@@ -424,7 +520,7 @@ TEMPLATE.innerHTML = `
       padding: 5px 12px;
       border: none;
       border-radius: 4px;
-      background: var(--atshare-accent, #1d4ed8);
+      background: var(--atshare-accent, #64DFDF);
       color: #fff;
       font-size: 13px;
       cursor: pointer;
@@ -493,12 +589,23 @@ TEMPLATE.innerHTML = `
   </style>
 
   <div style="position: relative; display: inline-block;">
-    <button class="trigger" part="trigger">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-      </svg>
-      <span class="label-text">Share</span>
+    <!-- Orbit (outside button, not clipped) -->
+    <svg class="trigger-orbit" aria-hidden="true" viewBox="0 0 100 100">
+      <g class="orbit-group">
+        <text class="orbit-at" x="50" y="4" text-anchor="middle" dominant-baseline="central">@</text>
+        <text class="orbit-at" x="97" y="50" text-anchor="middle" dominant-baseline="central">@</text>
+        <text class="orbit-at" x="50" y="97" text-anchor="middle" dominant-baseline="central">@</text>
+        <text class="orbit-at" x="3" y="50" text-anchor="middle" dominant-baseline="central">@</text>
+      </g>
+    </svg>
+
+    <button class="trigger" part="trigger" aria-label="Share via atShare">
+      <div class="trigger-fill"></div>
+      <span class="trigger-at">@</span>
+      <span class="label-text">
+        <span class="label-default">Share</span>
+        <span class="label-hover">atShare</span>
+      </span>
     </button>
 
     <div class="popover" role="dialog" aria-label="Share to...">
@@ -710,8 +817,12 @@ class AtshareSelector extends HTMLElement {
   }
 
   attributeChangedCallback(name, _old, value) {
-    if (name === 'label' && this._labelText) {
-      this._labelText.textContent = value || 'Share';
+    if (name === 'label') {
+      const label = value || 'Share';
+      const defaultSpan = this.shadowRoot.querySelector('.label-default');
+      const hoverSpan = this.shadowRoot.querySelector('.label-hover');
+      if (defaultSpan) defaultSpan.textContent = label;
+      if (hoverSpan) hoverSpan.textContent = (label === 'Share') ? 'atShare' : label;
     }
   }
 
@@ -726,7 +837,10 @@ class AtshareSelector extends HTMLElement {
 
   _render() {
     const label = this.getAttribute('label') || 'Share';
-    this._labelText.textContent = label;
+    const defaultSpan = this.shadowRoot.querySelector('.label-default');
+    const hoverSpan = this.shadowRoot.querySelector('.label-hover');
+    if (defaultSpan) defaultSpan.textContent = label;
+    if (hoverSpan) hoverSpan.textContent = (label === 'Share') ? 'atShare' : label;
     this._renderNetworks();
   }
 

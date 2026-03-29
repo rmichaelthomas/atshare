@@ -44,8 +44,10 @@ atshare-selector {
   --atshare-bg-hover: #334155;
   --atshare-color: #f8fafc;
   --atshare-border: #334155;
-  --atshare-accent: #60a5fa;
-  --atshare-radius: 8px;
+  --atshare-accent: #64DFDF;
+  --atshare-accent-text: #1A1A2E;
+  --atshare-orbit: 1;
+  --atshare-radius: 10px;
   --atshare-font-size: 14px;
 }
 ```
