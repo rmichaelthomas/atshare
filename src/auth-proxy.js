@@ -73,7 +73,9 @@ export async function signIn(handle) {
  */
 export async function checkSession() {
   const res = await fetch(`${API}/auth/session`, { credentials: 'include' });
-  return res.json();
+  const data = await res.json();
+  _did = data.did || null;
+  return data;
 }
 
 /**
