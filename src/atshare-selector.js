@@ -209,7 +209,7 @@ TEMPLATE.innerHTML = `
     }
     .signin-waiting .signin-cancel-btn:hover { color: #64748b; }
 
-    /* State: signed-in */
+    /* State: signed-in (handle looked up, not authenticated) */
     .signin-info {
       display: none;
       align-items: center;
@@ -218,7 +218,12 @@ TEMPLATE.innerHTML = `
       color: #475569;
     }
     .signin-info .signin-handle { font-weight: 500; }
-    .signin-info .signin-signout-btn {
+    .signin-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .signin-actions button {
       font-size: 11px;
       color: #94a3b8;
       background: none;
@@ -226,13 +231,24 @@ TEMPLATE.innerHTML = `
       cursor: pointer;
       padding: 0;
     }
-    .signin-info .signin-signout-btn:hover { color: #64748b; }
+    .signin-actions button:hover { color: #64748b; }
+    .signin-signin-btn { color: var(--atshare-accent, #1d4ed8) !important; }
+    .signin-signin-btn:hover { opacity: 0.8; }
+
+    /* Hide sign-in/forget/signout buttons by default, show per state */
+    .signin-signin-btn,
+    .signin-forget-btn,
+    .signin-signout-btn { display: none; }
+    .signin-zone.state-signedin .signin-signin-btn { display: inline; }
+    .signin-zone.state-signedin .signin-forget-btn { display: inline; }
+    .signin-zone.state-authenticated .signin-signout-btn { display: inline; }
 
     /* Visibility helpers — applied to parent .signin-zone */
-    .signin-zone.state-signedout  .signin-prompt      { display: block; }
-    .signin-zone.state-handle     .signin-handle-wrap { display: flex; }
-    .signin-zone.state-waiting    .signin-waiting      { display: flex; }
-    .signin-zone.state-signedin   .signin-info         { display: flex; }
+    .signin-zone.state-signedout  .signin-prompt       { display: block; }
+    .signin-zone.state-handle     .signin-handle-wrap  { display: flex; }
+    .signin-zone.state-waiting    .signin-waiting       { display: flex; }
+    .signin-zone.state-signedin   .signin-info          { display: flex; }
+    .signin-zone.state-authenticated .signin-info       { display: flex; }
   </style>
 
   <div style="position: relative; display: inline-block;">
@@ -268,7 +284,11 @@ TEMPLATE.innerHTML = `
 
         <div class="signin-info">
           <span class="signin-handle"></span>
-          <button class="signin-signout-btn">Forget</button>
+          <span class="signin-actions">
+            <button class="signin-signin-btn">Sign in</button>
+            <button class="signin-forget-btn">Forget</button>
+            <button class="signin-signout-btn">Sign out</button>
+          </span>
         </div>
       </div>
       <div class="divider"></div>
@@ -287,9 +307,10 @@ class AtshareSelector extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.appendChild(TEMPLATE.content.cloneNode(true));
 
-    this._session = null;       // AT Protocol session (future OAuth integration)
+    this._session = null;       // AT Protocol session
     this._preference = null;    // cached preference record
     this._open = false;
+    this._authenticated = false; // true when signed in via OAuth proxy
 
     this._trigger = this.shadowRoot.querySelector('.trigger');
     this._popover = this.shadowRoot.querySelector('.popover');
@@ -310,7 +331,10 @@ class AtshareSelector extends HTMLElement {
     this._signinCancelBtn   = this.shadowRoot.querySelector('.signin-cancel-btn');
     this._signinInfo        = this.shadowRoot.querySelector('.signin-info');
     this._signinHandle      = this.shadowRoot.querySelector('.signin-handle');
+    this._signinSigninBtn   = this.shadowRoot.querySelector('.signin-signin-btn');
+    this._signinForgetBtn   = this.shadowRoot.querySelector('.signin-forget-btn');
     this._signinSignoutBtn  = this.shadowRoot.querySelector('.signin-signout-btn');
+    this._signinWaitingText = this.shadowRoot.querySelector('.signin-waiting span');
 
     // Event listeners for sign-in zone
     this._signinPrompt.addEventListener('click', () => this._setSigninState('handle'));
@@ -319,6 +343,8 @@ class AtshareSelector extends HTMLElement {
       if (e.key === 'Enter') this._onSigninContinue();
     });
     this._signinCancelBtn.addEventListener('click', () => this._onSigninCancel());
+    this._signinSigninBtn.addEventListener('click', () => this._onSignIn());
+    this._signinForgetBtn.addEventListener('click', () => this._onForget());
     this._signinSignoutBtn.addEventListener('click', () => this._onSignOut());
 
     this._trigger.addEventListener('click', (e) => {
@@ -350,7 +376,11 @@ class AtshareSelector extends HTMLElement {
       const { did } = await checkSession();
       if (!did) return;
       // Server session exists — user previously signed in via OAuth
-      // The handle lookup will display the handle; this just confirms auth for writes
+      this._authenticated = true;
+      const handle = localStorage.getItem('atshare.handle');
+      if (handle) {
+        this._setSigninState('authenticated', { handle });
+      }
     } catch {}
   }
 
@@ -491,11 +521,12 @@ class AtshareSelector extends HTMLElement {
   }
 
   /**
-   * Switch the sign-in zone to one of: 'signedout' | 'handle' | 'waiting' | 'signedin'
-   * @param {'signedout'|'handle'|'waiting'|'signedin'} state
+   * Switch the sign-in zone to one of: 'signedout' | 'handle' | 'waiting' | 'signedin' | 'authenticated'
+   * @param {'signedout'|'handle'|'waiting'|'signedin'|'authenticated'} state
    * @param {object} [opts]
-   * @param {string} [opts.handle] - display handle for 'signedin' state
+   * @param {string} [opts.handle] - display handle for 'signedin' or 'authenticated' state
    * @param {string} [opts.errorMsg] - error message for 'handle' state
+   * @param {string} [opts.message] - waiting text for 'waiting' state
    */
   _setSigninState(state, opts = {}) {
     this._signinZone.className = `signin-zone state-${state}`;
@@ -513,8 +544,16 @@ class AtshareSelector extends HTMLElement {
       this._signinHandleInput.classList.add('error');
     }
 
+    if (state === 'waiting') {
+      this._signinWaitingText.textContent = opts.message || 'Loading preference…';
+    }
+
     if (state === 'signedin' && opts.handle) {
       this._signinHandle.textContent = `✓ ${opts.handle}`;
+    }
+
+    if (state === 'authenticated' && opts.handle) {
+      this._signinHandle.textContent = `✓ ${opts.handle} (signed in)`;
     }
   }
 
@@ -530,18 +569,50 @@ class AtshareSelector extends HTMLElement {
         this._renderNetworks();
       }
       try { localStorage.setItem('atshare.handle', handle); } catch {}
-      this._setSigninState('signedin', { handle });
+      // Don't downgrade from authenticated to signedin if session restore already ran
+      if (!this._authenticated) {
+        this._setSigninState('signedin', { handle });
+      } else {
+        this._setSigninState('authenticated', { handle });
+      }
     } catch (err) {
       this._setSigninState('handle', { errorMsg: "Couldn't find that handle" });
     }
   }
 
   _onSigninCancel() {
+    this._setSigninState(this._authenticated ? 'authenticated' : 'signedout');
+  }
+
+  async _onSignIn() {
+    const handle = this._signinHandleInput.value.trim()
+      || localStorage.getItem('atshare.handle');
+    if (!handle) {
+      this._setSigninState('handle');
+      return;
+    }
+    this._setSigninState('waiting', { message: 'Signing in…' });
+    try {
+      await signIn(handle);
+      this._authenticated = true;
+      this._setSigninState('authenticated', { handle });
+    } catch (err) {
+      // Revert to signedin (handle-only) state on failure
+      this._setSigninState('signedin', { handle });
+    }
+  }
+
+  _onForget() {
+    try { localStorage.removeItem('atshare.handle'); } catch {}
+    this._preference = null;
+    this._renderNetworks();
     this._setSigninState('signedout');
+    this._signinHandleInput.value = '';
   }
 
   async _onSignOut() {
     try { await signOut(); } catch {} // revoke server session
+    this._authenticated = false;
     try { localStorage.removeItem('atshare.handle'); } catch {}
     this._preference = null;
     this._renderNetworks();
