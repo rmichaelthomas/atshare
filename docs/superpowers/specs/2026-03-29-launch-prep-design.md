@@ -33,6 +33,8 @@ Prepare atshare.social for public launch and making the GitHub repo public. Eigh
 <meta name="twitter:title" content="atShare — Share button for the open social web">
 <meta name="twitter:description" content="Drop a single script tag onto any page and give your readers one-click sharing to Bluesky, Mastodon, and more. Zero dependencies, themeable, preference memory.">
 <meta name="twitter:image" content="https://atshare.social/og.png">
+<meta property="og:site_name" content="atShare">
+<meta name="theme-color" content="#1A1A2E">
 ```
 
 ### Deploy
@@ -77,6 +79,7 @@ Run after all other changes are complete. Review source, landing page, and demo 
 
 - Dead code or stale references
 - Unused CSS rules from the old trigger button design
+- Demo page script src path (`/src/` vs `/dist/`) — verify it references the correct path for the deployed context
 - Anything that can be tightened
 
 ## 5. Cache-Control Headers (`.htaccess`)
@@ -87,7 +90,7 @@ Create `public/.htaccess`, deployed to `public_html/`.
 # Cache-Control headers
 <IfModule mod_headers.c>
   # JS component bundles — 1 day cache
-  <FilesMatch "\.js$">
+  <FilesMatch "\.(js|cjs)$">
     Header set Cache-Control "public, max-age=86400"
   </FilesMatch>
 
@@ -121,7 +124,7 @@ Add missing fields:
 
 ## 7. Deploy Workflow Rename
 
-Rename step `"Deploy via SFTP"` to `"Deploy via SCP"` in `.github/workflows/deploy.yml`. Cosmetic only.
+Rename step `"Deploy via SFTP"` to `"Deploy via SCP"` in `.github/workflows/deploy.yml`. Cosmetic only. The GitHub secrets (`SFTP_PRIVATE_KEY`, `SFTP_HOST`, etc.) keep their current names — renaming secrets requires manual work in repo settings and isn't worth it.
 
 ## 8. robots.txt
 
@@ -138,10 +141,35 @@ Add `robots.txt` to the deploy workflow upload list.
 
 ## Deploy Workflow Summary
 
-After all changes, the deploy step uploads:
+Each new file needs two additions: an assembly `cp` line and an `scp` upload line.
 
-| File | Destination |
-|------|-------------|
+### Assembly step (new lines to add)
+
+```bash
+# New static assets
+cp public/og.png deploy/
+cp public/favicon.svg deploy/
+cp public/favicon-32.png deploy/
+cp public/apple-touch-icon.png deploy/
+cp public/robots.txt deploy/
+cp public/.htaccess deploy/
+```
+
+### SCP step (new lines to add)
+
+```bash
+scp $SCP_OPTS deploy/og.png "${REMOTE}:${DEST}/og.png"
+scp $SCP_OPTS deploy/favicon.svg "${REMOTE}:${DEST}/favicon.svg"
+scp $SCP_OPTS deploy/favicon-32.png "${REMOTE}:${DEST}/favicon-32.png"
+scp $SCP_OPTS deploy/apple-touch-icon.png "${REMOTE}:${DEST}/apple-touch-icon.png"
+scp $SCP_OPTS deploy/robots.txt "${REMOTE}:${DEST}/robots.txt"
+scp $SCP_OPTS deploy/.htaccess "${REMOTE}:${DEST}/.htaccess"
+```
+
+### Full upload manifest
+
+| Source | Destination |
+|--------|-------------|
 | `index.html` | `public_html/index.html` |
 | `dist/atshare-selector.js` | `public_html/dist/atshare-selector.js` |
 | `dist/atshare-selector.umd.cjs` | `public_html/dist/atshare-selector.umd.cjs` |
