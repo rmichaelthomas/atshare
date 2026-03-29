@@ -1,31 +1,26 @@
 # Roadmap
 
-## Next Up
+## Current State
 
-### Wire Component to Server Proxy
+### Server-Side OAuth Proxy — Done
 
-The server-side OAuth proxy is **deployed and working** at `atshare.social/atshare-api/api/`. The full OAuth flow has been tested end-to-end (login → PDS authorization → callback → session stored).
+Server deployed and working at `atshare.social/atshare-api/api/` (Hono + `@atproto/oauth-client-node` on cPanel Node.js, Namecheap VPS).
 
-**What's done:**
-- `server/` directory with Hono + `@atproto/oauth-client-node`
-- Deployed to cPanel Node.js on Namecheap VPS
-- Endpoints working: `/api/health`, `/api/jwks`, `/api/auth/login`, `/api/auth/callback`, `/api/auth/session`, `/api/auth/logout`, `/api/preference/:did`, `/api/preference` (POST)
-- `src/auth-proxy.js` exists with fetch-based API client
-- `public/server-client-metadata.json` deployed with correct redirect URIs
+Endpoints: `/api/health`, `/api/jwks`, `/api/auth/login`, `/api/auth/callback`, `/api/auth/session`, `/api/auth/logout`, `/api/preference/:did`, `/api/preference` (POST).
 
-**What's left — component UI integration:**
-1. Update `src/atshare-selector.js` to add a "Sign in" option alongside the existing "Enter handle" flow
-2. When user clicks "Sign in": call `signIn(handle)` from `auth-proxy.js` → opens popup to OAuth URL → popup closes after auth → component checks session → shows signed-in state
-3. When signed in via server proxy: preference writes go through `putPreference()` in `auth-proxy.js` (proxied to PDS)
-4. The handle lookup flow (enter handle → public read) remains as the default, no-auth experience
-5. Build and deploy updated demo
+### Component OAuth Sign-In — Done
 
-**Key files to modify:**
-- `src/atshare-selector.js` — add sign-in UI state and flow
-- `src/auth-proxy.js` — already written, needs testing with the component
-- `public/demo/index.html` — rebuild and deploy
+Two user flows in `<atshare-selector>`:
+- **Handle lookup** (default) — enter handle → public preference read from PDS → ✓ on preferred network
+- **Sign in** — after handle lookup, click "Sign in" → popup OAuth via server proxy → cookie session → preference writes go through `putPreference()` in `auth-proxy.js`
 
-**Server API base URL:** `https://atshare.social/atshare-api/api`
+Session restore on reload (cookie + localStorage handle). Sign-in zone states: `signedout` → `handle` → `waiting` → `signedin` → `authenticated`.
+
+### Next Up
+
+- **Build and deploy** updated demo to atshare.social (`npm run build:demo`)
+- **Cross-origin testing** from third-party domains against the production API
+- **Error UX** — surface sign-in failures (popup blocked, timeout, cancelled) more clearly
 
 ---
 
