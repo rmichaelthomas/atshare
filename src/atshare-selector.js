@@ -13,7 +13,7 @@
 import { NETWORKS, buildIntentUrl } from './networks.js';
 import { getPublicPreference } from './pds.js';
 import { resolveIdentity } from './identity.js';
-import { signIn, checkSession, signOut, getSession, putPreference } from './auth-proxy.js';
+import { getAuthUrl, checkSession, signOut, getSession, putPreference } from './auth-proxy.js';
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -80,7 +80,7 @@ TEMPLATE.innerHTML = `
       background: var(--atshare-bg-hover, #f8fafc);
     }
     .network-btn.preferred::after {
-      content: "✓";
+      content: "\\2713";
       margin-left: auto;
       color: var(--atshare-accent, #1d4ed8);
       font-size: 12px;
@@ -141,8 +141,8 @@ TEMPLATE.innerHTML = `
       padding: 6px 10px;
     }
 
-    /* State: signed-out — single "Enter handle to load preference" link */
-    .signin-prompt {
+    /* idle: "Sign in" link */
+    .signin-link {
       display: none;
       font-size: 12px;
       color: #94a3b8;
@@ -152,9 +152,9 @@ TEMPLATE.innerHTML = `
       cursor: pointer;
       text-align: left;
     }
-    .signin-prompt:hover { color: #64748b; }
+    .signin-link:hover { color: #64748b; }
 
-    /* State: handle-input */
+    /* input: handle form */
     .signin-handle-wrap {
       display: none;
       flex-direction: column;
@@ -179,8 +179,12 @@ TEMPLATE.innerHTML = `
       display: none;
     }
     .signin-handle-wrap .signin-error.visible { display: block; }
-    .signin-handle-wrap .signin-continue-btn {
-      align-self: flex-end;
+    .signin-handle-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .signin-btn {
       padding: 5px 12px;
       border: none;
       border-radius: 4px;
@@ -189,8 +193,17 @@ TEMPLATE.innerHTML = `
       font-size: 13px;
       cursor: pointer;
     }
+    .signin-input-cancel-btn {
+      font-size: 12px;
+      color: #94a3b8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .signin-input-cancel-btn:hover { color: #64748b; }
 
-    /* State: waiting (popup open) */
+    /* waiting */
     .signin-waiting {
       display: none;
       align-items: center;
@@ -209,7 +222,7 @@ TEMPLATE.innerHTML = `
     }
     .signin-waiting .signin-cancel-btn:hover { color: #64748b; }
 
-    /* State: signed-in (handle looked up, not authenticated) */
+    /* signedin */
     .signin-info {
       display: none;
       align-items: center;
@@ -218,12 +231,7 @@ TEMPLATE.innerHTML = `
       color: #475569;
     }
     .signin-info .signin-handle { font-weight: 500; }
-    .signin-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .signin-actions button {
+    .signin-signout-btn {
       font-size: 11px;
       color: #94a3b8;
       background: none;
@@ -231,24 +239,13 @@ TEMPLATE.innerHTML = `
       cursor: pointer;
       padding: 0;
     }
-    .signin-actions button:hover { color: #64748b; }
-    .signin-signin-btn { color: var(--atshare-accent, #1d4ed8) !important; }
-    .signin-signin-btn:hover { opacity: 0.8; }
+    .signin-signout-btn:hover { color: #64748b; }
 
-    /* Hide sign-in/forget/signout buttons by default, show per state */
-    .signin-signin-btn,
-    .signin-forget-btn,
-    .signin-signout-btn { display: none; }
-    .signin-zone.state-signedin .signin-signin-btn { display: inline; }
-    .signin-zone.state-signedin .signin-forget-btn { display: inline; }
-    .signin-zone.state-authenticated .signin-signout-btn { display: inline; }
-
-    /* Visibility helpers — applied to parent .signin-zone */
-    .signin-zone.state-signedout  .signin-prompt       { display: block; }
-    .signin-zone.state-handle     .signin-handle-wrap  { display: flex; }
-    .signin-zone.state-waiting    .signin-waiting       { display: flex; }
-    .signin-zone.state-signedin   .signin-info          { display: flex; }
-    .signin-zone.state-authenticated .signin-info       { display: flex; }
+    /* State visibility */
+    .signin-zone.state-idle     .signin-link        { display: inline; }
+    .signin-zone.state-input    .signin-handle-wrap  { display: flex; }
+    .signin-zone.state-waiting  .signin-waiting      { display: flex; }
+    .signin-zone.state-signedin .signin-info         { display: flex; }
   </style>
 
   <div style="position: relative; display: inline-block;">
@@ -267,28 +264,27 @@ TEMPLATE.innerHTML = `
         <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input">
         <button class="mastodon-go-btn">Share</button>
       </div>
-      <div class="signin-zone state-signedout">
-        <button class="signin-prompt">Enter handle to load preference</button>
+      <div class="signin-zone state-idle">
+        <button class="signin-link">Sign in</button>
 
         <div class="signin-handle-wrap">
-          <label>Your AT Protocol handle</label>
-          <input type="text" class="signin-handle-input" placeholder="rob.bsky.social" autocomplete="username" spellcheck="false">
+          <label>Your Bluesky handle</label>
+          <input type="text" class="signin-handle-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
           <span class="signin-error"></span>
-          <button class="signin-continue-btn">Continue</button>
+          <div class="signin-handle-actions">
+            <button class="signin-btn">Sign in</button>
+            <button class="signin-input-cancel-btn">Cancel</button>
+          </div>
         </div>
 
         <div class="signin-waiting">
-          <span>Loading preference…</span>
+          <span>Signing in\u2026</span>
           <button class="signin-cancel-btn">Cancel</button>
         </div>
 
         <div class="signin-info">
           <span class="signin-handle"></span>
-          <span class="signin-actions">
-            <button class="signin-signin-btn">Sign in</button>
-            <button class="signin-forget-btn">Forget</button>
-            <button class="signin-signout-btn">Sign out</button>
-          </span>
+          <button class="signin-signout-btn">Sign out</button>
         </div>
       </div>
       <div class="divider"></div>
@@ -307,10 +303,10 @@ class AtshareSelector extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.appendChild(TEMPLATE.content.cloneNode(true));
 
-    this._session = null;       // AT Protocol session
     this._preference = null;    // cached preference record
     this._open = false;
     this._authenticated = false; // true when signed in via OAuth proxy
+    this._authPopup = null;      // reference to the OAuth popup window
 
     this._trigger = this.shadowRoot.querySelector('.trigger');
     this._popover = this.shadowRoot.querySelector('.popover');
@@ -321,30 +317,27 @@ class AtshareSelector extends HTMLElement {
     this._labelText = this.shadowRoot.querySelector('.label-text');
 
     // Sign-in zone elements
-    this._signinZone        = this.shadowRoot.querySelector('.signin-zone');
-    this._signinPrompt      = this.shadowRoot.querySelector('.signin-prompt');
-    this._signinHandleWrap  = this.shadowRoot.querySelector('.signin-handle-wrap');
-    this._signinHandleInput = this.shadowRoot.querySelector('.signin-handle-input');
-    this._signinError       = this.shadowRoot.querySelector('.signin-error');
-    this._signinContinueBtn = this.shadowRoot.querySelector('.signin-continue-btn');
-    this._signinWaiting     = this.shadowRoot.querySelector('.signin-waiting');
-    this._signinCancelBtn   = this.shadowRoot.querySelector('.signin-cancel-btn');
-    this._signinInfo        = this.shadowRoot.querySelector('.signin-info');
-    this._signinHandle      = this.shadowRoot.querySelector('.signin-handle');
-    this._signinSigninBtn   = this.shadowRoot.querySelector('.signin-signin-btn');
-    this._signinForgetBtn   = this.shadowRoot.querySelector('.signin-forget-btn');
-    this._signinSignoutBtn  = this.shadowRoot.querySelector('.signin-signout-btn');
-    this._signinWaitingText = this.shadowRoot.querySelector('.signin-waiting span');
+    this._signinZone           = this.shadowRoot.querySelector('.signin-zone');
+    this._signinLink           = this.shadowRoot.querySelector('.signin-link');
+    this._signinHandleWrap     = this.shadowRoot.querySelector('.signin-handle-wrap');
+    this._signinHandleInput    = this.shadowRoot.querySelector('.signin-handle-input');
+    this._signinError          = this.shadowRoot.querySelector('.signin-error');
+    this._signinBtn            = this.shadowRoot.querySelector('.signin-btn');
+    this._signinInputCancelBtn = this.shadowRoot.querySelector('.signin-input-cancel-btn');
+    this._signinWaiting        = this.shadowRoot.querySelector('.signin-waiting');
+    this._signinCancelBtn      = this.shadowRoot.querySelector('.signin-cancel-btn');
+    this._signinInfo           = this.shadowRoot.querySelector('.signin-info');
+    this._signinHandle         = this.shadowRoot.querySelector('.signin-handle');
+    this._signinSignoutBtn     = this.shadowRoot.querySelector('.signin-signout-btn');
 
-    // Event listeners for sign-in zone
-    this._signinPrompt.addEventListener('click', () => this._setSigninState('handle'));
-    this._signinContinueBtn.addEventListener('click', () => this._onSigninContinue());
+    // Sign-in zone event listeners
+    this._signinLink.addEventListener('click', () => this._setSigninState('input'));
+    this._signinBtn.addEventListener('click', () => this._onSignIn());
     this._signinHandleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this._onSigninContinue();
+      if (e.key === 'Enter') this._onSignIn();
     });
+    this._signinInputCancelBtn.addEventListener('click', () => this._setSigninState('idle'));
     this._signinCancelBtn.addEventListener('click', () => this._onSigninCancel());
-    this._signinSigninBtn.addEventListener('click', () => this._onSignIn());
-    this._signinForgetBtn.addEventListener('click', () => this._onForget());
     this._signinSignoutBtn.addEventListener('click', () => this._onSignOut());
 
     this._trigger.addEventListener('click', (e) => {
@@ -368,34 +361,47 @@ class AtshareSelector extends HTMLElement {
   connectedCallback() {
     this._render();
     this._tryRestoreSession();
-    this._tryLoadSavedHandle();
+    this._tryBackgroundPreferenceRead();
   }
 
+  /**
+   * Check for an existing OAuth session (cookie) and restore signed-in state.
+   */
   async _tryRestoreSession() {
     try {
       const { did } = await checkSession();
       if (!did) return;
-      // Server session exists — user previously signed in via OAuth
       this._authenticated = true;
       const handle = localStorage.getItem('atshare.handle');
       if (handle) {
-        this._setSigninState('authenticated', { handle });
+        this._setSigninState('signedin', { handle });
       }
     } catch {}
   }
 
-  async _tryLoadSavedHandle() {
+  /**
+   * Silently load preference from PDS using a previously saved handle.
+   * Does NOT change sign-in state — just populates ✓ on networks.
+   */
+  async _tryBackgroundPreferenceRead() {
     try {
       const handle = localStorage.getItem('atshare.handle');
       if (!handle) return;
-      const { did, pdsEndpoint } = await resolveIdentity(handle);
-      const pref = await getPublicPreference(pdsEndpoint, did);
-      if (pref) {
-        this._preference = pref;
-        this._renderNetworks();
-      }
-      this._setSigninState('signedin', { handle });
+      await this._loadPreferenceForHandle(handle);
     } catch {}
+  }
+
+  /**
+   * Resolve a handle and load their preference from PDS.
+   * @param {string} handle
+   */
+  async _loadPreferenceForHandle(handle) {
+    const { did, pdsEndpoint } = await resolveIdentity(handle);
+    const pref = await getPublicPreference(pdsEndpoint, did);
+    if (pref) {
+      this._preference = pref;
+      this._renderNetworks();
+    }
   }
 
   attributeChangedCallback(name, _old, value) {
@@ -477,7 +483,7 @@ class AtshareSelector extends HTMLElement {
     window.open(intentUrl, '_blank', 'noopener,noreferrer');
     this._closePopover();
 
-    // Persist preference (PDS if authenticated, localStorage as Phase 2 fallback)
+    // Persist preference (PDS if authenticated, localStorage always)
     this._persistPreference(networkId, opts);
   }
 
@@ -520,103 +526,152 @@ class AtshareSelector extends HTMLElement {
     this._mastodonInput.value = instanceUrl;
   }
 
+  // --- Sign-in state machine ---
+
   /**
-   * Switch the sign-in zone to one of: 'signedout' | 'handle' | 'waiting' | 'signedin' | 'authenticated'
-   * @param {'signedout'|'handle'|'waiting'|'signedin'|'authenticated'} state
+   * Switch the sign-in zone to one of: 'idle' | 'input' | 'waiting' | 'signedin'
+   * @param {'idle'|'input'|'waiting'|'signedin'} state
    * @param {object} [opts]
-   * @param {string} [opts.handle] - display handle for 'signedin' or 'authenticated' state
-   * @param {string} [opts.errorMsg] - error message for 'handle' state
-   * @param {string} [opts.message] - waiting text for 'waiting' state
+   * @param {string} [opts.handle] - display handle for 'signedin' state
+   * @param {string} [opts.errorMsg] - error message for 'input' state
    */
   _setSigninState(state, opts = {}) {
     this._signinZone.className = `signin-zone state-${state}`;
 
     // Clear error on state transitions (unless explicitly setting one)
-    if (state !== 'handle' || !opts.errorMsg) {
+    if (state !== 'input' || !opts.errorMsg) {
       this._signinError.textContent = '';
       this._signinError.classList.remove('visible');
       this._signinHandleInput.classList.remove('error');
     }
 
-    if (state === 'handle' && opts.errorMsg) {
-      this._signinError.textContent = opts.errorMsg;
-      this._signinError.classList.add('visible');
-      this._signinHandleInput.classList.add('error');
-    }
-
-    if (state === 'waiting') {
-      this._signinWaitingText.textContent = opts.message || 'Loading preference…';
+    if (state === 'input') {
+      // Pre-fill handle from localStorage if input is empty
+      if (!this._signinHandleInput.value) {
+        const saved = localStorage.getItem('atshare.handle');
+        if (saved) this._signinHandleInput.value = saved;
+      }
+      if (opts.errorMsg) {
+        this._signinError.textContent = opts.errorMsg;
+        this._signinError.classList.add('visible');
+        this._signinHandleInput.classList.add('error');
+      }
+      // Focus the input after a tick (allows CSS transition)
+      setTimeout(() => this._signinHandleInput.focus(), 0);
     }
 
     if (state === 'signedin' && opts.handle) {
-      this._signinHandle.textContent = `✓ ${opts.handle}`;
-    }
-
-    if (state === 'authenticated' && opts.handle) {
-      this._signinHandle.textContent = `✓ ${opts.handle} (signed in)`;
+      this._signinHandle.textContent = `\u2713 ${opts.handle}`;
     }
   }
 
-  async _onSigninContinue() {
+  /**
+   * Sign in via OAuth popup.
+   * Opens popup synchronously (avoids popup blockers), then fetches OAuth URL.
+   */
+  async _onSignIn() {
     const handle = this._signinHandleInput.value.trim();
     if (!handle) return;
-    this._setSigninState('waiting');
-    try {
-      const { did, pdsEndpoint } = await resolveIdentity(handle);
-      const pref = await getPublicPreference(pdsEndpoint, did);
-      if (pref) {
-        this._preference = pref;
-        this._renderNetworks();
-      }
-      try { localStorage.setItem('atshare.handle', handle); } catch {}
-      // Don't downgrade from authenticated to signedin if session restore already ran
-      if (!this._authenticated) {
-        this._setSigninState('signedin', { handle });
-      } else {
-        this._setSigninState('authenticated', { handle });
-      }
-    } catch (err) {
-      this._setSigninState('handle', { errorMsg: "Couldn't find that handle" });
-    }
-  }
 
-  _onSigninCancel() {
-    this._setSigninState(this._authenticated ? 'authenticated' : 'signedout');
-  }
-
-  async _onSignIn() {
-    const handle = this._signinHandleInput.value.trim()
-      || localStorage.getItem('atshare.handle');
-    if (!handle) {
-      this._setSigninState('handle');
+    // Open popup IMMEDIATELY (synchronous with user gesture — avoids blockers)
+    const popup = window.open('about:blank', 'atshare-auth', 'width=600,height=700');
+    if (!popup) {
+      this._setSigninState('input', { errorMsg: 'Popup blocked. Allow popups and try again.' });
       return;
     }
-    this._setSigninState('waiting', { message: 'Signing in…' });
+    popup.document.write('<p style="font-family:system-ui;color:#64748b;text-align:center;margin-top:40px">Redirecting\u2026</p>');
+    this._authPopup = popup;
+    this._setSigninState('waiting');
+
     try {
-      await signIn(handle);
+      // Fetch OAuth URL from server (async — popup is already open)
+      const url = await getAuthUrl(handle);
+      popup.location.href = url;
+
+      // Wait for popup to close, then verify session
+      await this._waitForPopupClose(popup);
+
+      // Session established — save handle, load preference
       this._authenticated = true;
-      this._setSigninState('authenticated', { handle });
-    } catch (err) {
-      // Revert to signedin (handle-only) state on failure
+      try { localStorage.setItem('atshare.handle', handle); } catch {}
       this._setSigninState('signedin', { handle });
+
+      // Load preference from PDS in background
+      this._loadPreferenceForHandle(handle).catch(() => {});
+    } catch (err) {
+      // Close popup if still open
+      try { if (!popup.closed) popup.close(); } catch {}
+      this._authPopup = null;
+      if (err.message === 'Sign-in timed out' || err.message === 'Sign-in cancelled') {
+        this._setSigninState('input');
+      } else {
+        this._setSigninState('input', { errorMsg: err.message || 'Sign-in failed' });
+      }
     }
   }
 
-  _onForget() {
-    try { localStorage.removeItem('atshare.handle'); } catch {}
-    this._preference = null;
-    this._renderNetworks();
-    this._setSigninState('signedout');
-    this._signinHandleInput.value = '';
+  /**
+   * Poll for popup to close, then check for session.
+   * @param {Window} popup
+   * @returns {Promise<void>} resolves when session is confirmed
+   */
+  _waitForPopupClose(popup) {
+    return new Promise((resolve, reject) => {
+      const poll = setInterval(async () => {
+        try {
+          if (!popup.closed) return;
+        } catch {
+          // cross-origin access error — popup is on different origin, keep waiting
+          return;
+        }
+        clearInterval(poll);
+        this._authPopup = null;
+
+        try {
+          const session = await checkSession();
+          if (session.did) {
+            resolve();
+          } else {
+            reject(new Error('Sign-in cancelled'));
+          }
+        } catch {
+          reject(new Error('Sign-in cancelled'));
+        }
+      }, 1000);
+
+      // Safety timeout
+      setTimeout(() => {
+        clearInterval(poll);
+        this._authPopup = null;
+        reject(new Error('Sign-in timed out'));
+      }, 120000);
+    });
   }
 
+  /**
+   * Cancel sign-in — close popup if open, return to input state.
+   */
+  _onSigninCancel() {
+    if (this._authPopup && !this._authPopup.closed) {
+      try { this._authPopup.close(); } catch {}
+    }
+    this._authPopup = null;
+    this._setSigninState('input');
+  }
+
+  /**
+   * Sign out — revoke OAuth session, clear state, return to idle.
+   */
   async _onSignOut() {
-    try { await signOut(); } catch {} // revoke server session
+    try { await signOut(); } catch {}
     this._authenticated = false;
-    try { localStorage.removeItem('atshare.handle'); } catch {}
+    try {
+      localStorage.removeItem('atshare.handle');
+      localStorage.removeItem('atshare.preference');
+    } catch {}
     this._preference = null;
     this._renderNetworks();
-    this._setSigninState('signedout');
+    this._setSigninState('idle');
     this._signinHandleInput.value = '';
   }
 }
