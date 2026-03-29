@@ -10,10 +10,33 @@
  *   <atshare-selector url="https://example.com/post/123" text="Check this out"></atshare-selector>
  */
 
-import { NETWORKS, buildIntentUrl } from './networks.js';
+import {
+  getProtocols,
+  getClients,
+  getDefaultClient,
+  getClientById,
+  getClientByDomain,
+  buildIntentUrl,
+  resolvePreference,
+  migrateLocalPreference,
+} from './destinations.js';
 import { getPublicPreference } from './pds.js';
 import { resolveIdentity } from './identity.js';
 import { getAuthUrl, checkSession, signOut, getSession, putPreference, handleAuthCallback } from './auth-proxy.js';
+
+import blueskyIcon from './icons/bluesky.svg?raw';
+import mastodonIcon from './icons/mastodon.svg?raw';
+import linkedinIcon from './icons/linkedin.svg?raw';
+import xIcon from './icons/x.svg?raw';
+import threadsIcon from './icons/threads.svg?raw';
+
+const ICONS = {
+  'bluesky.svg': blueskyIcon,
+  'mastodon.svg': mastodonIcon,
+  'linkedin.svg': linkedinIcon,
+  'x.svg': xIcon,
+  'threads.svg': threadsIcon,
+};
 
 const TEMPLATE = document.createElement('template');
 TEMPLATE.innerHTML = `
@@ -50,7 +73,8 @@ TEMPLATE.innerHTML = `
       display: none;
       position: absolute;
       z-index: 9999;
-      min-width: 200px;
+      min-width: 220px;
+      max-width: 280px;
       padding: 8px;
       margin-top: 6px;
       border: 1px solid var(--atshare-border, #e2e8f0);
@@ -62,7 +86,8 @@ TEMPLATE.innerHTML = `
       display: block;
     }
 
-    .network-btn {
+    /* --- Protocol buttons (default view) --- */
+    .protocol-btn {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -75,15 +100,225 @@ TEMPLATE.innerHTML = `
       font-size: 14px;
       cursor: pointer;
       text-align: left;
+      position: relative;
+      box-sizing: border-box;
     }
-    .network-btn:hover {
+    .protocol-btn:hover {
       background: var(--atshare-bg-hover, #f8fafc);
     }
-    .network-btn.preferred::after {
-      content: "\\2713";
-      margin-left: auto;
-      color: var(--atshare-accent, #1d4ed8);
+    .protocol-btn.preferred {
+      background: var(--atshare-preferred-bg, rgba(0, 0, 0, 0.02));
+    }
+    .protocol-btn .proto-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .protocol-btn .proto-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .protocol-btn .proto-label {
+      flex: 1;
+      min-width: 0;
+    }
+    .protocol-btn .proto-name {
+      font-weight: 500;
+    }
+    .protocol-btn .proto-via {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-left: 4px;
+    }
+    .protocol-btn .proto-check {
       font-size: 12px;
+      margin-left: 2px;
+      flex-shrink: 0;
+    }
+    .protocol-btn .proto-chevron {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .protocol-btn .proto-chevron:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+    .protocol-btn .proto-chevron svg {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.15s;
+    }
+    .protocol-btn .proto-chevron.expanded svg {
+      transform: rotate(90deg);
+    }
+
+    /* --- Client sub-list (expanded) --- */
+    .client-list {
+      padding: 2px 0 2px 20px;
+    }
+    .client-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--atshare-color, #0f172a);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .client-btn:hover {
+      background: var(--atshare-bg-hover, #f8fafc);
+    }
+    .client-btn.preferred {
+      font-weight: 500;
+    }
+    .client-btn .client-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .client-btn .client-check {
+      margin-left: auto;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* --- More destinations link --- */
+    .more-link {
+      display: block;
+      width: 100%;
+      padding: 6px 10px;
+      margin-top: 2px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: #64748b;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .more-link:hover {
+      background: var(--atshare-bg-hover, #f8fafc);
+      color: #475569;
+    }
+
+    /* --- Full list view --- */
+    .full-list {
+      display: none;
+    }
+    .full-list.visible {
+      display: block;
+    }
+    .full-list .back-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px 8px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .full-list .back-link:hover {
+      color: #475569;
+    }
+    .full-list .back-link svg {
+      width: 12px;
+      height: 12px;
+    }
+    .full-list-section {
+      margin-bottom: 4px;
+    }
+    .full-list-section .section-header {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .full-list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--atshare-color, #0f172a);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .full-list-item:hover {
+      background: var(--atshare-bg-hover, #f8fafc);
+    }
+    .full-list-item .item-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .full-list-item .item-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .full-list-item .item-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .full-list-item .item-check {
+      margin-left: auto;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* --- Clipboard --- */
+    .clipboard-divider {
+      height: 1px;
+      background: var(--atshare-border, #e2e8f0);
+      margin: 6px 0;
+    }
+    .clipboard-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--atshare-color, #0f172a);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .clipboard-btn:hover {
+      background: var(--atshare-bg-hover, #f8fafc);
+    }
+    .clipboard-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     .divider {
@@ -92,6 +327,7 @@ TEMPLATE.innerHTML = `
       margin: 6px 0;
     }
 
+    /* --- Mastodon instance input --- */
     .mastodon-input-wrap {
       display: none;
       padding: 8px 10px;
@@ -246,6 +482,14 @@ TEMPLATE.innerHTML = `
     .signin-zone.state-input    .signin-handle-wrap  { display: flex; }
     .signin-zone.state-waiting  .signin-waiting      { display: flex; }
     .signin-zone.state-signedin .signin-info         { display: flex; }
+
+    /* --- View mode --- */
+    .default-view {
+      display: block;
+    }
+    .default-view.hidden {
+      display: none;
+    }
   </style>
 
   <div style="position: relative; display: inline-block;">
@@ -258,12 +502,16 @@ TEMPLATE.innerHTML = `
     </button>
 
     <div class="popover" role="dialog" aria-label="Share to...">
-      <div class="network-list"></div>
-      <div class="mastodon-input-wrap">
-        <label>Your Mastodon instance</label>
-        <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input">
-        <button class="mastodon-go-btn">Share</button>
+      <div class="default-view">
+        <div class="network-list"></div>
+        <div class="mastodon-input-wrap">
+          <label>Your Mastodon instance</label>
+          <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input">
+          <button class="mastodon-go-btn">Share</button>
+        </div>
+        <button class="more-link">More destinations</button>
       </div>
+      <div class="full-list"></div>
       <div class="signin-zone state-idle">
         <button class="signin-link">Sign in</button>
 
@@ -293,6 +541,44 @@ TEMPLATE.innerHTML = `
   </div>
 `;
 
+// SVG for chevron (right-pointing arrow)
+const CHEVRON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+// SVG for back arrow
+const BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+
+// SVG for clipboard/copy
+const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+/**
+ * Render an SVG icon for a client. If the client has an `icon` field, look it
+ * up in ICONS and tint it. Otherwise render a small filled circle.
+ * @param {object} client
+ * @param {string} color - protocol brand color
+ * @param {number} [size=18] - icon size in px
+ * @returns {string} HTML string
+ */
+function renderClientIcon(client, color, size = 18) {
+  // Validate color is a hex value (defense-in-depth against malicious registry data)
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#888888';
+
+  if (client.icon && ICONS[client.icon]) {
+    let svg = ICONS[client.icon];
+    // Set fill, width, height on root <svg> element only (not child elements)
+    svg = svg.replace(/<svg([^>]*)>/, (match, attrs) => {
+      // Remove any existing fill/width/height from root attrs
+      let cleaned = attrs
+        .replace(/\s*fill="[^"]*"/g, '')
+        .replace(/\s*width="[^"]*"/g, '')
+        .replace(/\s*height="[^"]*"/g, '');
+      return `<svg${cleaned} fill="${safeColor}" width="${size}" height="${size}" style="display:block">`;
+    });
+    return svg;
+  }
+  // Fallback: colored dot
+  return `<span style="display:inline-block;width:${Math.round(size * 0.45)}px;height:${Math.round(size * 0.45)}px;border-radius:50%;background:${safeColor};"></span>`;
+}
+
 class AtshareSelector extends HTMLElement {
   static get observedAttributes() {
     return ['url', 'text', 'label'];
@@ -308,12 +594,20 @@ class AtshareSelector extends HTMLElement {
     this._authenticated = false; // true when signed in via OAuth proxy
     this._authPopup = null;      // reference to the OAuth popup window
 
+    // UI state for popover views
+    this._expandedProtocol = null;        // null or protocol ID string
+    this._viewMode = 'default';           // 'default' | 'full'
+    this._pendingFediverseClientId = null; // client awaiting instance input
+
     this._trigger = this.shadowRoot.querySelector('.trigger');
     this._popover = this.shadowRoot.querySelector('.popover');
+    this._defaultView = this.shadowRoot.querySelector('.default-view');
     this._networkList = this.shadowRoot.querySelector('.network-list');
     this._mastodonWrap = this.shadowRoot.querySelector('.mastodon-input-wrap');
     this._mastodonInput = this.shadowRoot.querySelector('.mastodon-instance-input');
     this._mastodonGoBtn = this.shadowRoot.querySelector('.mastodon-go-btn');
+    this._moreLink = this.shadowRoot.querySelector('.more-link');
+    this._fullList = this.shadowRoot.querySelector('.full-list');
     this._labelText = this.shadowRoot.querySelector('.label-text');
 
     // Sign-in zone elements
@@ -350,18 +644,25 @@ class AtshareSelector extends HTMLElement {
       if (e.key === 'Enter') this._onMastodonGo();
     });
 
-    document.addEventListener('click', (e) => {
+    this._moreLink.addEventListener('click', () => this._showFullList());
+
+    this._onDocumentClick = (e) => {
       // composedPath() pierces Shadow DOM — only close if click was outside this element
       if (!e.composedPath().includes(this)) {
         this._closePopover();
       }
-    }, { passive: true });
+    };
   }
 
   connectedCallback() {
+    document.addEventListener('click', this._onDocumentClick, { passive: true });
     this._render();
     this._tryRestoreSession();
     this._tryBackgroundPreferenceRead();
+  }
+
+  disconnectedCallback() {
+    document.removeEventListener('click', this._onDocumentClick);
   }
 
   /**
@@ -381,7 +682,7 @@ class AtshareSelector extends HTMLElement {
 
   /**
    * Silently load preference from PDS using a previously saved handle.
-   * Does NOT change sign-in state — just populates ✓ on networks.
+   * Does NOT change sign-in state — just populates checkmarks on networks.
    */
   async _tryBackgroundPreferenceRead() {
     try {
@@ -397,9 +698,19 @@ class AtshareSelector extends HTMLElement {
    */
   async _loadPreferenceForHandle(handle) {
     const { did, pdsEndpoint } = await resolveIdentity(handle);
-    const pref = await getPublicPreference(pdsEndpoint, did);
-    if (pref) {
-      this._preference = pref;
+    const pdsPref = await getPublicPreference(pdsEndpoint, did);
+    if (pdsPref) {
+      const resolved = resolvePreference(pdsPref);
+      if (resolved) {
+        this._preference = resolved;
+        // Hydrate localStorage from PDS
+        const localPref = {
+          primaryNetwork: resolved.protocolId,
+          preferredClient: resolved.clientId,
+        };
+        if (resolved.instance) localPref.mastodonInstance = resolved.instance;
+        try { localStorage.setItem('atshare.preference', JSON.stringify(localPref)); } catch {}
+      }
       this._renderNetworks();
     }
   }
@@ -425,19 +736,330 @@ class AtshareSelector extends HTMLElement {
     this._renderNetworks();
   }
 
+  // ---------------------------------------------------------------------------
+  // Default view: protocol buttons with chevrons
+  // ---------------------------------------------------------------------------
+
   _renderNetworks() {
     this._networkList.innerHTML = '';
-    for (const network of NETWORKS) {
+    const localPref = this._getLocalPreference();
+
+    for (const protocol of getProtocols()) {
+      // "other" protocol doesn't get a top-level button
+      if (protocol.id === 'other') continue;
+
+      const defaultClient = getDefaultClient(protocol.id);
+      if (!defaultClient) continue;
+
+      // Determine the preferred client for this protocol
+      const isPreferred = localPref?.primaryNetwork === protocol.id;
+      const preferredClientId = isPreferred ? localPref.preferredClient : null;
+      const preferredClient = preferredClientId ? getClientById(preferredClientId) : null;
+      const displayClient = preferredClient || defaultClient;
+
+      // Build the protocol button row
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;flex-direction:column;';
+
       const btn = document.createElement('button');
-      btn.className = 'network-btn';
-      btn.dataset.networkId = network.id;
-      if (this._preference?.primaryNetwork === network.id) {
+      btn.className = 'protocol-btn';
+      if (isPreferred) {
+        btn.classList.add('preferred');
+        btn.style.background = this._hexToRgba(protocol.color, 0.06);
+      }
+
+      // Icon
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'proto-icon';
+      iconWrap.innerHTML = renderClientIcon(displayClient, protocol.color);
+      btn.appendChild(iconWrap);
+
+      // Label + via text
+      const labelWrap = document.createElement('span');
+      labelWrap.className = 'proto-label';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'proto-name';
+      nameSpan.textContent = protocol.label;
+      labelWrap.appendChild(nameSpan);
+
+      if (isPreferred && preferredClient) {
+        const viaSpan = document.createElement('span');
+        viaSpan.className = 'proto-via';
+        viaSpan.textContent = `via ${preferredClient.name}`;
+        labelWrap.appendChild(viaSpan);
+      }
+
+      btn.appendChild(labelWrap);
+
+      // Checkmark (if preferred)
+      if (isPreferred) {
+        const check = document.createElement('span');
+        check.className = 'proto-check';
+        check.style.color = protocol.color;
+        check.textContent = '\u2713';
+        btn.appendChild(check);
+      }
+
+      // Chevron
+      const chevron = document.createElement('span');
+      chevron.className = 'proto-chevron';
+      if (this._expandedProtocol === protocol.id) {
+        chevron.classList.add('expanded');
+      }
+      chevron.innerHTML = CHEVRON_SVG;
+      chevron.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._toggleExpanded(protocol.id);
+      });
+      btn.appendChild(chevron);
+
+      // Click the button area (not chevron) to share
+      btn.addEventListener('click', (e) => {
+        // Don't trigger share if they clicked the chevron
+        if (e.target.closest('.proto-chevron')) return;
+        this._onProtocolSelect(protocol.id, displayClient);
+      });
+
+      row.appendChild(btn);
+
+      // Expanded client sub-list
+      if (this._expandedProtocol === protocol.id) {
+        const clientListEl = this._renderClientList(protocol);
+        row.appendChild(clientListEl);
+      }
+
+      this._networkList.appendChild(row);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Expanded client sub-list
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Render the client sub-list for an expanded protocol.
+   * @param {object} protocol
+   * @returns {HTMLElement}
+   */
+  _renderClientList(protocol) {
+    const wrap = document.createElement('div');
+    wrap.className = 'client-list';
+
+    const localPref = this._getLocalPreference();
+    const isPreferredProtocol = localPref?.primaryNetwork === protocol.id;
+
+    for (const client of getClients(protocol.id)) {
+      const btn = document.createElement('button');
+      btn.className = 'client-btn';
+
+      const isPreferredClient = isPreferredProtocol && localPref?.preferredClient === client.id;
+      if (isPreferredClient) {
         btn.classList.add('preferred');
       }
-      btn.textContent = network.label;
-      btn.addEventListener('click', () => this._onNetworkSelect(network.id));
-      this._networkList.appendChild(btn);
+
+      // Colored dot
+      const dot = document.createElement('span');
+      dot.className = 'client-dot';
+      dot.style.background = isPreferredClient ? protocol.color : '#cbd5e1';
+      btn.appendChild(dot);
+
+      // Name
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = client.name;
+      btn.appendChild(nameSpan);
+
+      // Checkmark for preferred
+      if (isPreferredClient) {
+        const check = document.createElement('span');
+        check.className = 'client-check';
+        check.style.color = protocol.color;
+        check.textContent = '\u2713';
+        btn.appendChild(check);
+      }
+
+      btn.addEventListener('click', () => this._onClientSelect(client, protocol));
+      wrap.appendChild(btn);
     }
+
+    return wrap;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Full list view
+  // ---------------------------------------------------------------------------
+
+  _showFullList() {
+    this._viewMode = 'full';
+    this._defaultView.classList.add('hidden');
+    this._renderFullList();
+    this._fullList.classList.add('visible');
+  }
+
+  _hideFullList() {
+    this._viewMode = 'default';
+    this._fullList.classList.remove('visible');
+    this._fullList.innerHTML = '';
+    this._defaultView.classList.remove('hidden');
+  }
+
+  _renderFullList() {
+    this._fullList.innerHTML = '';
+
+    // Back link
+    const backBtn = document.createElement('button');
+    backBtn.className = 'back-link';
+    backBtn.innerHTML = `${BACK_SVG} <span>Back</span>`;
+    backBtn.addEventListener('click', () => this._hideFullList());
+    this._fullList.appendChild(backBtn);
+
+    const localPref = this._getLocalPreference();
+
+    // Render all protocols
+    for (const protocol of getProtocols()) {
+      const section = document.createElement('div');
+      section.className = 'full-list-section';
+
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      header.style.color = protocol.color;
+      header.textContent = protocol.label;
+      section.appendChild(header);
+
+      for (const client of getClients(protocol.id)) {
+        const item = document.createElement('button');
+        item.className = 'full-list-item';
+
+        const isPreferred = localPref?.primaryNetwork === protocol.id
+          && localPref?.preferredClient === client.id;
+
+        // Icon or dot
+        if (client.icon && ICONS[client.icon]) {
+          const iconWrap = document.createElement('span');
+          iconWrap.className = 'item-icon';
+          iconWrap.innerHTML = renderClientIcon(client, protocol.color, 16);
+          item.appendChild(iconWrap);
+        } else {
+          const dot = document.createElement('span');
+          dot.className = 'item-dot';
+          dot.style.background = protocol.color;
+          item.appendChild(dot);
+        }
+
+        // Name
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = client.name;
+        item.appendChild(nameSpan);
+
+        // Checkmark
+        if (isPreferred) {
+          const check = document.createElement('span');
+          check.className = 'item-check';
+          check.style.color = protocol.color;
+          check.textContent = '\u2713';
+          item.appendChild(check);
+        }
+
+        item.addEventListener('click', () => this._onFullListSelect(client, protocol));
+        section.appendChild(item);
+      }
+
+      this._fullList.appendChild(section);
+    }
+
+    // Clipboard divider + button
+    const clipDivider = document.createElement('div');
+    clipDivider.className = 'clipboard-divider';
+    this._fullList.appendChild(clipDivider);
+
+    const clipBtn = document.createElement('button');
+    clipBtn.className = 'clipboard-btn';
+    clipBtn.innerHTML = `${COPY_SVG} <span>Copy to clipboard</span>`;
+    clipBtn.addEventListener('click', () => this._onClipboardCopy());
+    this._fullList.appendChild(clipBtn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Event handlers
+  // ---------------------------------------------------------------------------
+
+  _toggleExpanded(protocolId) {
+    this._expandedProtocol = this._expandedProtocol === protocolId ? null : protocolId;
+    this._mastodonWrap.classList.remove('visible');
+    this._renderNetworks();
+  }
+
+  /**
+   * Handle clicking a protocol button (not chevron). Share immediately using
+   * the preferred or default client.
+   */
+  _onProtocolSelect(protocolId, displayClient) {
+    const clientId = displayClient.id;
+
+    // If a Fediverse client requires an instance and we don't have one stored,
+    // show the Mastodon instance input instead of sharing.
+    if (displayClient.requiresInstance) {
+      const storedInstance = this._getMastodonInstance();
+      if (storedInstance) {
+        this._share(clientId, { instance: storedInstance });
+      } else {
+        this._mastodonWrap.classList.add('visible');
+      }
+      return;
+    }
+
+    this._share(clientId);
+  }
+
+  /**
+   * Handle clicking a client in the expanded sub-list. Shares, saves as
+   * preferred, and collapses the sub-list.
+   */
+  _onClientSelect(client, protocol) {
+    if (client.requiresInstance) {
+      const storedInstance = this._getMastodonInstance();
+      if (storedInstance) {
+        this._share(client.id, { instance: storedInstance });
+      } else {
+        this._mastodonWrap.classList.add('visible');
+        // Store which client they wanted so _onMastodonGo uses the right one
+        this._pendingFediverseClientId = client.id;
+      }
+      return;
+    }
+    this._share(client.id);
+  }
+
+  /**
+   * Handle clicking a destination in the full list. Shares, saves, and
+   * returns to default view.
+   */
+  _onFullListSelect(client, protocol) {
+    if (client.requiresInstance) {
+      const storedInstance = this._getMastodonInstance();
+      if (storedInstance) {
+        this._share(client.id, { instance: storedInstance });
+        this._hideFullList();
+      } else {
+        this._hideFullList();
+        this._mastodonWrap.classList.add('visible');
+        this._pendingFediverseClientId = client.id;
+      }
+      return;
+    }
+    this._share(client.id);
+    this._hideFullList();
+  }
+
+  async _onClipboardCopy() {
+    try {
+      await navigator.clipboard.writeText(this.shareText);
+      const btn = this.shadowRoot.querySelector('.clipboard-btn span');
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    } catch {}
   }
 
   _togglePopover() {
@@ -446,7 +1068,13 @@ class AtshareSelector extends HTMLElement {
 
   _openPopover() {
     this._open = true;
+    this._viewMode = 'default';
+    this._expandedProtocol = null;
     this._mastodonWrap.classList.remove('visible');
+    this._fullList.classList.remove('visible');
+    this._fullList.innerHTML = '';
+    this._defaultView.classList.remove('hidden');
+    this._renderNetworks();
     this._popover.classList.add('open');
   }
 
@@ -455,75 +1083,100 @@ class AtshareSelector extends HTMLElement {
     this._popover.classList.remove('open');
   }
 
-  _onNetworkSelect(networkId) {
-    if (networkId === 'mastodon') {
-      // Check if we have a stored instance
-      const storedInstance = this._getMastodonInstance();
-      if (storedInstance) {
-        this._share('mastodon', { mastodonInstance: storedInstance });
-      } else {
-        this._mastodonWrap.classList.add('visible');
-      }
-      return;
-    }
-    this._share(networkId);
-  }
-
   _onMastodonGo() {
     const instance = this._mastodonInput.value.trim();
     if (!instance) return;
-    // Normalize instance URL
     const instanceUrl = instance.startsWith('http') ? instance : `https://${instance}`;
     this._setMastodonInstance(instanceUrl);
-    this._share('mastodon', { mastodonInstance: instanceUrl });
+    const clientId = this._pendingFediverseClientId || 'mastodon';
+    this._pendingFediverseClientId = null;
+    this._share(clientId, { instance: instanceUrl });
   }
 
-  _share(networkId, opts = {}) {
-    const intentUrl = buildIntentUrl(networkId, this.shareText, opts);
+  _share(clientId, opts = {}) {
+    const intentUrl = buildIntentUrl(clientId, {
+      text: this.shareText,
+      url: this.shareUrl,
+      title: this.getAttribute('title') || '',
+      instance: opts.instance,
+    });
     window.open(intentUrl, '_blank', 'noopener,noreferrer');
+    this._expandedProtocol = null;
     this._closePopover();
-
-    // Persist preference (PDS if authenticated, localStorage always)
-    this._persistPreference(networkId, opts);
+    this._persistPreference(clientId, opts);
   }
 
-  _persistPreference(networkId, opts) {
-    const pref = {
-      primaryNetwork: networkId,
-      networks: this._buildNetworksArray(networkId, opts),
+  _persistPreference(clientId, opts = {}) {
+    const client = getClientById(clientId);
+    if (!client) return;
+
+    // Write new flat format to localStorage
+    const localPref = {
+      primaryNetwork: client.protocolId,
+      preferredClient: clientId,
     };
+    if (opts.instance) {
+      localPref.mastodonInstance = opts.instance;
+    }
     try {
-      localStorage.setItem('atshare.preference', JSON.stringify(pref));
+      localStorage.setItem('atshare.preference', JSON.stringify(localPref));
     } catch {}
-    // Write to PDS via server proxy if authenticated (fire-and-forget)
+
+    // Update in-memory preference
+    this._preference = { protocolId: client.protocolId, clientId };
+
+    // Write PDS-format preference (fire-and-forget) if authenticated
     const session = getSession();
     if (session) {
-      putPreference(session.sub, pref).catch(() => {});
+      const pdsPref = {
+        primaryNetwork: client.protocolId === 'atproto' ? 'bluesky' : 'mastodon',
+        networks: [],
+      };
+      if (client.protocolId === 'atproto') {
+        pdsPref.networks.push({ type: 'atproto', appView: `https://${client.domain || 'bsky.app'}` });
+      } else if (opts.instance) {
+        pdsPref.networks.push({ type: 'activitypub', instance: opts.instance });
+      }
+      putPreference(session.sub, pdsPref).catch(() => {});
     }
   }
 
-  _buildNetworksArray(primaryNetworkId, opts) {
-    const networks = [];
-    if (primaryNetworkId === 'bluesky') {
-      networks.push({ type: 'atproto', appView: 'https://bsky.app' });
-    } else if (primaryNetworkId === 'mastodon' && opts.mastodonInstance) {
-      networks.push({ type: 'activitypub', instance: opts.mastodonInstance });
+  _getLocalPreference() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('atshare.preference') || 'null');
+      if (!raw) return null;
+      const migrated = migrateLocalPreference(raw);
+      // Write back migrated format if it changed
+      if (migrated && raw.networks) {
+        localStorage.setItem('atshare.preference', JSON.stringify(migrated));
+      }
+      return migrated;
+    } catch {
+      return null;
     }
-    return networks;
   }
 
   _getMastodonInstance() {
-    try {
-      const pref = JSON.parse(localStorage.getItem('atshare.preference') || 'null');
-      return pref?.networks?.find((n) => n.type === 'activitypub')?.instance || null;
-    } catch (_) {
-      return null;
-    }
+    const pref = this._getLocalPreference();
+    return pref?.mastodonInstance || null;
   }
 
   _setMastodonInstance(instanceUrl) {
     // Pre-fill for next time
     this._mastodonInput.value = instanceUrl;
+  }
+
+  /**
+   * Convert a hex color to rgba with given alpha.
+   * @param {string} hex
+   * @param {number} alpha
+   * @returns {string}
+   */
+  _hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   // --- Sign-in state machine ---
