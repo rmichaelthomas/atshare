@@ -37,13 +37,13 @@ jobs:
           echo "${{ secrets.SFTP_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           sftp -o StrictHostKeyChecking=no -o Port=${{ secrets.SFTP_PORT }} -i ~/.ssh/deploy_key -b - ${{ secrets.SFTP_USER }}@${{ secrets.SFTP_HOST }} <<'SFTP'
+          -mkdir /home/adjaxahy/public_html/dist
+          -mkdir /home/adjaxahy/public_html/demo
           cd /home/adjaxahy/public_html
           put deploy/index.html index.html
-          cd /home/adjaxahy/public_html/dist
-          put deploy/dist/atshare-selector.js atshare-selector.js
-          put deploy/dist/atshare-selector.umd.cjs atshare-selector.umd.cjs
-          cd /home/adjaxahy/public_html/demo
-          put deploy/demo/index.html index.html
+          put deploy/dist/atshare-selector.js dist/atshare-selector.js
+          put deploy/dist/atshare-selector.umd.cjs dist/atshare-selector.umd.cjs
+          put deploy/demo/index.html demo/index.html
           bye
           SFTP
           rm ~/.ssh/deploy_key
