@@ -48,7 +48,7 @@ atshare-selector {
   --atshare-accent-text: #1A1A2E;
   --atshare-orbit: 1;
   --atshare-radius: 10px;
-  --atshare-font-size: 14px;
+  --atshare-font-size: 16px;
 }
 ```
 
