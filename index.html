@@ -2,7 +2,465 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/demo/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>atShare — Share button for Bluesky and Mastodon</title>
+  <meta name="description" content="Drop a single script tag onto any page and give your readers one-click sharing to Bluesky and Mastodon. Zero dependencies, themeable, preference memory.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.6;
+    }
+
+    /* --- Header --- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .wordmark {
+      font-size: 1.2rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #0f172a;
+    }
+
+    /* --- Mode switcher --- */
+    .mode-switcher {
+      display: inline-flex;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 3px;
+    }
+    .mode-btn {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-family: inherit;
+      color: #64748b;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .mode-btn.active {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* --- Mode visibility --- */
+    body[data-mode="dev"] .plain-only { display: none !important; }
+    body[data-mode="plain"] .dev-only { display: none !important; }
+
+    /* --- Sections --- */
+    section { margin-top: 72px; }
+    section:first-of-type { margin-top: 40px; }
+
+    h1 { font-size: 2rem; margin: 0 0 8px; line-height: 1.2; }
+    h2 { font-size: 1.25rem; margin: 0 0 16px; }
+    .tagline { color: #475569; font-size: 1.1rem; margin: 0 0 32px; }
+    p { color: #475569; font-size: 15px; }
+    p.muted { color: #94a3b8; font-size: 13px; }
+
+    /* --- Hero demo --- */
+    .hero-demo {
+      display: flex;
+      justify-content: center;
+      padding: 40px 0;
+    }
+
+    /* --- Code blocks --- */
+    .code-wrap {
+      position: relative;
+      margin: 16px 0;
+    }
+    pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #fff;
+      font-size: 11px;
+      color: #64748b;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .copy-btn:hover { background: #f8fafc; }
+
+    /* --- Steps --- */
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+    }
+    .steps li {
+      counter-increment: step;
+      padding: 0 0 16px 36px;
+      position: relative;
+      color: #475569;
+      font-size: 15px;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* --- Theme cards --- */
+    .theme-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .theme-card {
+      flex: 1;
+      min-width: 200px;
+      padding: 24px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+    .theme-card h3 {
+      font-size: 13px;
+      margin: 0 0 16px;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .theme-card.dark {
+      background: #0f172a;
+      border-color: #1e293b;
+    }
+    .theme-card.dark h3 { color: #94a3b8; }
+    .theme-card.custom {
+      background: #faf5ff;
+      border-color: #e9d5ff;
+    }
+    .theme-card.custom h3 { color: #7c3aed; }
+
+    /* Dark theme overrides */
+    .theme-card.dark atshare-selector {
+      --atshare-bg: #1e293b;
+      --atshare-bg-hover: #334155;
+      --atshare-color: #f8fafc;
+      --atshare-border: #334155;
+      --atshare-accent: #60a5fa;
+    }
+    /* Custom theme overrides */
+    .theme-card.custom atshare-selector {
+      --atshare-accent: #7c3aed;
+      --atshare-radius: 20px;
+      --atshare-border: #e9d5ff;
+      --atshare-bg-hover: #f5f3ff;
+    }
+
+    /* --- Table --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 16px 0;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid #e2e8f0;
+      font-weight: 600;
+      color: #475569;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #475569;
+    }
+    td code {
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    /* --- Preference explainer --- */
+    .pref-points { padding: 0; list-style: none; }
+    .pref-points li {
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+      color: #475569;
+      font-size: 15px;
+    }
+    .pref-points li:last-child { border-bottom: none; }
+    .pref-points li strong { color: #0f172a; }
+
+    /* --- Footer --- */
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      gap: 24px;
+      font-size: 13px;
+    }
+    footer a {
+      color: #94a3b8;
+      text-decoration: none;
+    }
+    footer a:hover { color: #64748b; }
+
+    /* --- Responsive --- */
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5rem; }
+      .tagline { font-size: 1rem; }
+      .theme-row { flex-direction: column; }
+    }
+  </style>
 </head>
-<body></body>
+<body data-mode="plain">
+
+  <!-- Header -->
+  <header>
+    <span class="wordmark">atShare</span>
+    <div class="mode-switcher" role="tablist" aria-label="Content mode">
+      <button class="mode-btn active" role="tab" aria-selected="true" data-mode="plain">Plain English</button>
+      <button class="mode-btn" role="tab" aria-selected="false" data-mode="dev">Developer</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section>
+    <h1>A share button for the open social web</h1>
+    <p class="tagline">One script tag. Zero dependencies. Bluesky + Mastodon sharing for any site.</p>
+
+    <div class="hero-demo">
+      <atshare-selector
+        url="https://atshare.social"
+        text="Check out atShare — a universal share selector for the open social web:">
+      </atshare-selector>
+    </div>
+
+    <div class="plain-only">
+      <p>Add a share button to your site that lets readers pick their favorite network. Their choice is remembered automatically. If they sign in with their Bluesky handle, the preference syncs across every site running atShare — stored on their own server, not yours.</p>
+    </div>
+
+    <div class="dev-only">
+      <p>The component above is a live <code>&lt;atshare-selector&gt;</code>. Here's the markup:</p>
+      <div class="code-wrap">
+        <pre><code>&lt;atshare-selector
+  url="https://atshare.social"
+  text="Check out atShare:"&gt;
+&lt;/atshare-selector&gt;
+
+&lt;script type="module"
+  src="https://atshare.social/dist/atshare-selector.js"&gt;
+&lt;/script&gt;</code></pre>
+        <button class="copy-btn">Copy</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section>
+    <h2>Quick Start</h2>
+
+    <div class="plain-only">
+      <ol class="steps">
+        <li>
+          Copy this snippet into your page's HTML, anywhere you want a share button:
+          <div class="code-wrap" style="margin-top:12px;">
+            <pre><code>&lt;atshare-selector url="https://yoursite.com/post"&gt;
+&lt;/atshare-selector&gt;
+
+&lt;script type="module"
+  src="https://atshare.social/dist/atshare-selector.js"&gt;
+&lt;/script&gt;</code></pre>
+            <button class="copy-btn">Copy</button>
+          </div>
+        </li>
+        <li>Change the <code>url</code> to the page you want shared.</li>
+        <li>Done. Your readers can now share to Bluesky or Mastodon.</li>
+      </ol>
+    </div>
+
+    <div class="dev-only">
+      <div class="code-wrap">
+        <pre><code>&lt;atshare-selector
+  url="https://yoursite.com/post/123"
+  text="Check this out:"
+  label="Share this post"&gt;
+&lt;/atshare-selector&gt;
+
+&lt;script type="module"
+  src="https://atshare.social/dist/atshare-selector.js"&gt;
+&lt;/script&gt;</code></pre>
+        <button class="copy-btn">Copy</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Attribute</th><th>Required</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>url</code></td><td>yes</td><td>current page URL</td><td>The URL to share</td></tr>
+          <tr><td><code>text</code></td><td>no</td><td>--</td><td>Text prepended to the URL</td></tr>
+          <tr><td><code>label</code></td><td>no</td><td><code>"Share"</code></td><td>Button label</td></tr>
+        </tbody>
+      </table>
+
+      <p class="muted">ES module, ~19 KB. Shadow DOM encapsulated — styles don't leak in or out. Works with any framework or vanilla HTML.</p>
+    </div>
+  </section>
+
+  <!-- Theming -->
+  <section>
+    <h2>Theming</h2>
+
+    <div class="plain-only">
+      <p>atShare picks up your site's look automatically, or you can customize it with a few CSS variables to match your brand.</p>
+    </div>
+
+    <div class="theme-row">
+      <div class="theme-card">
+        <h3>Default</h3>
+        <atshare-selector url="https://atshare.social" text="Default theme example:"></atshare-selector>
+      </div>
+      <div class="theme-card dark">
+        <h3>Dark</h3>
+        <atshare-selector url="https://atshare.social" text="Dark theme example:"></atshare-selector>
+      </div>
+      <div class="theme-card custom">
+        <h3>Custom</h3>
+        <atshare-selector url="https://atshare.social" text="Custom theme example:"></atshare-selector>
+      </div>
+    </div>
+
+    <div class="dev-only">
+      <table>
+        <thead>
+          <tr><th>Property</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--atshare-bg</code></td><td><code>#ffffff</code></td><td>Background</td></tr>
+          <tr><td><code>--atshare-bg-hover</code></td><td><code>#f8fafc</code></td><td>Hover background</td></tr>
+          <tr><td><code>--atshare-color</code></td><td><code>#0f172a</code></td><td>Text color</td></tr>
+          <tr><td><code>--atshare-border</code></td><td><code>#e2e8f0</code></td><td>Border &amp; dividers</td></tr>
+          <tr><td><code>--atshare-accent</code></td><td><code>#1d4ed8</code></td><td>Accent (buttons, checkmark)</td></tr>
+          <tr><td><code>--atshare-radius</code></td><td><code>6px</code></td><td>Border radius</td></tr>
+          <tr><td><code>--atshare-font-size</code></td><td><code>14px</code></td><td>Font size</td></tr>
+        </tbody>
+      </table>
+
+      <p>Example dark theme:</p>
+      <div class="code-wrap">
+        <pre><code>atshare-selector {
+  --atshare-bg: #1e293b;
+  --atshare-bg-hover: #334155;
+  --atshare-color: #f8fafc;
+  --atshare-border: #334155;
+  --atshare-accent: #60a5fa;
+}</code></pre>
+        <button class="copy-btn">Copy</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How Preferences Work -->
+  <section>
+    <div class="plain-only">
+      <h2>Remembers your readers' favorite network</h2>
+      <ul class="pref-points">
+        <li><strong>Automatic:</strong> When a reader shares, their choice is remembered on that device. Next time, their network shows a checkmark.</li>
+        <li><strong>Sign in to sync:</strong> Readers can sign in with their Bluesky handle to sync their preference across every site running atShare. One-time setup, works everywhere.</li>
+        <li><strong>Private by design:</strong> No account on your site needed. No tracking. The preference is stored on the reader's own AT Protocol server (PDS), not yours.</li>
+      </ul>
+    </div>
+
+    <div class="dev-only">
+      <h2>Preference System</h2>
+      <p><strong>Local layer:</strong> Every share action writes to <code>localStorage</code> key <code>atshare.preference</code> with <code>{ primaryNetwork, networks[] }</code>. Automatic, no sign-in required.</p>
+      <p><strong>AT Protocol layer:</strong> OAuth sign-in writes a <code>social.atshare.preference</code> record to the user's PDS at rkey <code>self</code>. Any site embedding atShare can read it back via public <code>getRecord</code>.</p>
+      <p><strong>Cross-origin:</strong> Authenticated API calls route through a hidden iframe proxy on atshare.social via <code>postMessage</code>, avoiding third-party cookie restrictions. The OAuth popup sends the session token back to the embedding page via <code>postMessage</code>; the server accepts Bearer tokens alongside cookies.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <a href="https://github.com/rmichaelthomas/atshare" target="_blank" rel="noopener">GitHub</a>
+    <span style="color:#e2e8f0;">|</span>
+    <a href="/demo/">Demo</a>
+    <span style="color:#e2e8f0;">|</span>
+    <span style="color:#94a3b8;">MIT License</span>
+  </footer>
+
+  <!-- Component -->
+  <script type="module" src="/src/atshare-selector.js"></script>
+
+  <!-- Mode switcher + copy buttons -->
+  <script>
+    // Mode switcher
+    const body = document.body;
+    const buttons = document.querySelectorAll('.mode-btn');
+    const saved = localStorage.getItem('atshare.landing-mode');
+    if (saved === 'dev' || saved === 'plain') {
+      body.dataset.mode = saved;
+      buttons.forEach(b => {
+        const isActive = b.dataset.mode === saved;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive);
+      });
+    }
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        body.dataset.mode = mode;
+        buttons.forEach(b => {
+          const isActive = b.dataset.mode === mode;
+          b.classList.toggle('active', isActive);
+          b.setAttribute('aria-selected', isActive);
+        });
+        try { localStorage.setItem('atshare.landing-mode', mode); } catch {}
+      });
+    });
+
+    // Copy buttons
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const code = btn.closest('.code-wrap').querySelector('code');
+        navigator.clipboard.writeText(code.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        });
+      });
+    });
+  </script>
+</body>
 </html>
