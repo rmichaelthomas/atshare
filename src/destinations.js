@@ -120,3 +120,34 @@ export function resolvePreference(pdsRecord) {
   const defaultClient = getDefaultClient(protocolId);
   return defaultClient ? { protocolId, clientId: defaultClient.id } : null;
 }
+
+/**
+ * Migrate a localStorage preference from the old format to the new flat format.
+ * Old format: { primaryNetwork: "bluesky", networks: [...] }
+ * New format: { primaryNetwork: "atproto", preferredClient: "bsky", mastodonInstance?: "..." }
+ *
+ * Returns the preference in new format. If already in new format, returns as-is.
+ * @param {object|null} pref
+ * @returns {object|null}
+ */
+export function migrateLocalPreference(pref) {
+  if (!pref) return null;
+
+  // Already in new format (has preferredClient, no networks array)
+  if (pref.preferredClient && !pref.networks) return pref;
+
+  // Old format detected — migrate
+  const resolved = resolvePreference(pref);
+  if (!resolved) return null;
+
+  const migrated = {
+    primaryNetwork: resolved.protocolId,
+    preferredClient: resolved.clientId,
+  };
+
+  if (resolved.instance) {
+    migrated.mastodonInstance = resolved.instance;
+  }
+
+  return migrated;
+}
