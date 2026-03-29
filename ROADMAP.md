@@ -14,11 +14,16 @@ Simplified sign-in flow in `<atshare-selector>`:
 - **Local preference** — sharing to a network saves the choice in localStorage (automatic, no sign-in needed)
 - **Sign in** — click "Sign in" → enter Bluesky handle → popup OAuth via server proxy → preference written to PDS → syncs across all sites running atShare
 
-Popup opens synchronously on user click (about:blank → OAuth URL) to avoid popup blockers. Session restore on reload via cookie + localStorage handle. Sign-in zone states: `idle` → `input` → `waiting` → `signedin`.
+Popup opens synchronously on user click (about:blank → OAuth URL) to avoid popup blockers. Session restore on reload via localStorage handle. Sign-in zone states: `idle` → `input` → `waiting` → `signedin`.
+
+### Cross-Origin Iframe Proxy — Done
+
+All authenticated API calls route through a hidden iframe proxy on atshare.social via `postMessage`, eliminating the dependency on third-party cookies (`SameSite=None`). The OAuth popup sends the session token back to the opener via `postMessage`; the server accepts `Authorization: Bearer` tokens alongside cookies.
+
+Files: `src/iframe-proxy.js` (client), `public/proxy/index.html` (proxy page), updated `src/auth-proxy.js`.
 
 ### Next Up
 
-- **Cross-origin testing** from third-party domains against the production API
 - **Landing page** — atshare.social home page with docs and live demo
 
 ---

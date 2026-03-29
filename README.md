@@ -56,6 +56,8 @@ atShare remembers a user's preferred network across every site that embeds it --
 
 **Cross-site (sign in):** Users click "Sign in" in the selector, enter their Bluesky handle, and complete a one-time OAuth flow via popup. This writes a `social.atshare.preference` record to their PDS. Any site running atShare can read it back and show the checkmark -- the preference follows the user across the web.
 
+**Cross-origin architecture:** The component uses a hidden iframe proxy on atshare.social to relay authenticated API calls via `postMessage`. This avoids third-party cookie restrictions -- the iframe makes same-origin requests while the OAuth popup sends the session token back to the embedding page via `postMessage`.
+
 ## Development
 
 ```bash
@@ -77,6 +79,9 @@ src/
   identity.js           Handle/DID/PDS resolution
   pds.js                Preference record read/write (public)
   auth-proxy.js         Server-backed OAuth proxy client
+  iframe-proxy.js       Cross-origin iframe proxy (postMessage relay)
+public/
+  proxy/index.html      Iframe proxy page hosted on atshare.social
 server/
   index.js              Hono API server
   oauth.js              NodeOAuthClient singleton
