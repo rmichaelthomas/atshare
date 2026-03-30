@@ -1,8 +1,9 @@
 # Cache-Control headers
 <IfModule mod_headers.c>
-  # JS component bundles — 1 day cache
+  # JS component bundles — 1 day cache, CORS for cross-origin embedding
   <FilesMatch "\.(js|cjs)$">
     Header set Cache-Control "public, max-age=86400"
+    Header set Access-Control-Allow-Origin "*"
   </FilesMatch>
 
   # Static assets (images, icons) — 1 week cache
