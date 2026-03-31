@@ -24,7 +24,7 @@ let _did = null;
 export async function getAuthUrl(handle) {
   const data = await proxyRequest('getAuthUrl', {
     handle,
-    returnUrl: window.location.href.split('#')[0],
+    returnUrl: window.location.origin + window.location.pathname + window.location.search,
   });
   return data.url;
 }

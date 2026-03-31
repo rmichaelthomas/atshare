@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <meta name="theme-color" content="#0E0E1A">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://slingshot.microcosm.blue https://plc.directory https://atshare.social; object-src 'none'; base-uri 'self';">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,12 +29,13 @@
       --n100: #E8E8EC;
       --n200: #B0B0BC;
       --n300: #8A8A9A;
-      --n400: #55556A;
+      --n400: #9090a8;
       --border:        rgba(100, 223, 223, 0.10);
       --border-strong: rgba(100, 223, 223, 0.18);
       --font-display: 'Urbanist', sans-serif;
       --font-body:    'Albert Sans', sans-serif;
       --font-mono:    'SF Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+      color-scheme: dark;
     }
 
     body {
@@ -77,9 +79,10 @@
       font-weight: 500;
       color: var(--n400);
       text-decoration: none;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 5px;
+      min-height: 44px;
       padding: 5px 10px;
       border-radius: 6px;
       transition: color 0.15s, background 0.15s;
@@ -251,6 +254,11 @@
     }
     tr:last-child td { border-bottom: none; }
 
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -285,12 +293,25 @@
       font-weight: 500;
       color: var(--n400);
       text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
       padding: 4px 10px;
       border-radius: 6px;
       transition: color 0.15s, background 0.15s;
     }
     .footer-link:hover { color: var(--seafoam); background: rgba(100,223,223,0.06); }
     .footer-sep { color: var(--ink-600); font-size: 12px; padding: 0 2px; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     :focus-visible {
       outline: 2px solid var(--seafoam);
@@ -327,9 +348,9 @@
     <div class="demos">
 
       <!-- Default -->
-      <div class="demo-block">
+      <section class="demo-block">
         <div class="demo-meta">
-          <p class="demo-label">Default</p>
+          <h2 class="demo-label">Default</h2>
           <p class="demo-note">Out of the box, no theme overrides. Inherits cleanly into light-background pages.</p>
         </div>
         <div class="demo-stage light">
@@ -344,12 +365,12 @@
   <span class="t-attr">text</span>=<span class="t-str">"Check this out:"</span><span class="t-tag">&gt;
 &lt;/atshare-selector&gt;</span></code></pre>
         </div>
-      </div>
+      </section>
 
       <!-- Dark -->
-      <div class="demo-block">
+      <section class="demo-block">
         <div class="demo-meta">
-          <p class="demo-label">Dark theme</p>
+          <h2 class="demo-label">Dark theme</h2>
           <p class="demo-note">CSS custom properties applied for dark-background pages. Uses the atShare brand palette.</p>
         </div>
         <div class="demo-stage dark-demo">
@@ -368,12 +389,12 @@
   <span class="t-attr">--atshare-accent</span>: <span class="t-str">#64DFDF</span>;
 }</code></pre>
         </div>
-      </div>
+      </section>
 
       <!-- Custom brand -->
-      <div class="demo-block">
+      <section class="demo-block">
         <div class="demo-meta">
-          <p class="demo-label">Custom brand</p>
+          <h2 class="demo-label">Custom brand</h2>
           <p class="demo-note">Every visual property is overridable. This example uses a different accent color and pill radius.</p>
         </div>
         <div class="demo-stage purple-demo" style="background:#f5f3ff;">
@@ -390,7 +411,7 @@
   <span class="t-attr">--atshare-radius</span>: <span class="t-str">20px</span>;
 }</code></pre>
         </div>
-      </div>
+      </section>
 
     </div>
   </div>
@@ -400,6 +421,7 @@
     <div class="wrap">
       <h2 class="ref-h">CSS custom properties</h2>
       <p class="ref-sub">All properties are scoped to the component's shadow DOM and can be set on any ancestor element.</p>
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -456,6 +478,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </section>
 </main>
@@ -465,12 +488,12 @@
     <div class="footer-row">
       <p class="footer-copy">
         © 2026 atShare contributors. Released under the
-        <a href="https://github.com/rmichaelthomas/atshare/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
+        <a href="https://github.com/rmichaelthomas/atshare/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License<span class="sr-only"> (opens in new tab)</span></a>.
       </p>
       <nav class="footer-links" aria-label="Footer links">
-        <a href="https://github.com/rmichaelthomas/atshare" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/rmichaelthomas/atshare" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub<span class="sr-only"> (opens in new tab)</span></a>
         <span class="footer-sep" aria-hidden="true">·</span>
-        <a href="https://www.npmjs.com/package/@atshare/selector" class="footer-link" target="_blank" rel="noopener noreferrer">npm</a>
+        <a href="https://www.npmjs.com/package/@atshare/selector" class="footer-link" target="_blank" rel="noopener noreferrer">npm<span class="sr-only"> (opens in new tab)</span></a>
         <span class="footer-sep" aria-hidden="true">·</span>
         <a href="/" class="footer-link">atshare.social</a>
       </nav>

@@ -35,6 +35,7 @@ function ensureProxy() {
     _iframe.style.cssText = 'display:none;width:0;height:0;border:none;position:absolute;';
     _iframe.setAttribute('aria-hidden', 'true');
     _iframe.setAttribute('tabindex', '-1');
+    _iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     _iframe.title = 'atShare proxy';
     document.body.appendChild(_iframe);
 

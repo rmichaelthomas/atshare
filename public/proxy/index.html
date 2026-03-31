@@ -25,6 +25,11 @@ let sessionToken = null;
 try { sessionToken = localStorage.getItem('atshare_token'); } catch {}
 
 window.addEventListener('message', async (e) => {
+  // atShare proxy is designed to be embedded by any https:// site.
+  // Reject null origins (local files) and http:// origins — only allow https://.
+  // A full allowlist is not feasible since any site may legitimately embed this proxy.
+  if (!e.origin || !e.origin.startsWith('https://')) return;
+
   const msg = e.data;
   if (!msg || msg.type !== 'atshare-proxy-request') return;
 
@@ -95,9 +100,15 @@ async function proxyFetch(url, opts = {}) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
-// Signal ready to the parent
+// Signal ready to the parent.
+// Use document.referrer origin when available to narrow the target;
+// fall back to '*' since the ready message contains no sensitive data.
 if (window.parent !== window) {
-  window.parent.postMessage({ type: 'atshare-proxy-ready' }, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) targetOrigin = new URL(document.referrer).origin;
+  } catch {}
+  window.parent.postMessage({ type: 'atshare-proxy-ready' }, targetOrigin);
 }
 </script>
 </body>
