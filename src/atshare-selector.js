@@ -45,8 +45,8 @@ TEMPLATE.innerHTML = `
       display: inline-block;
       font-family: inherit;
       /* Muted text — overridable for dark themes */
-      --_muted: var(--atshare-muted, #94a3b8);
-      --_muted-hover: var(--atshare-muted-hover, #64748b);
+      --_muted: var(--atshare-muted, #6b7280);
+      --_muted-hover: var(--atshare-muted-hover, #4b5563);
     }
 
     /* --- Orbit --- */
@@ -86,6 +86,13 @@ TEMPLATE.innerHTML = `
       .trigger-at {
         transition: none !important;
       }
+    }
+    @media (hover: none) {
+      .trigger-fill { display: none; }
+      .trigger-at { display: none; }
+      .trigger:hover { padding-left: 18px; color: var(--atshare-color, #0f172a); }
+      .trigger .label-default { display: inline !important; }
+      .trigger .label-hover { display: none !important; }
     }
 
     /* --- Trigger button --- */
@@ -175,6 +182,8 @@ TEMPLATE.innerHTML = `
       z-index: 9999;
       min-width: 224px;
       max-width: 288px;
+      max-height: calc(100vh - 80px);
+      overflow-y: auto;
       padding: 6px;
       margin-top: 8px;
       border: 1px solid var(--atshare-border, #e2e8f0);
@@ -185,14 +194,31 @@ TEMPLATE.innerHTML = `
     .popover.open {
       display: block;
     }
+    /* Bottom-sheet on narrow screens. Note: position:fixed is relative to the viewport;
+       if any ancestor uses CSS transform/filter/perspective, the fixed positioning
+       will be relative to that ancestor instead (known browser limitation). */
+    @media (max-width: 400px) {
+      .popover.open {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 14px 14px 0 0;
+        margin-top: 0;
+      }
+    }
 
     /* --- Protocol buttons (default view) --- */
     .protocol-btn {
       display: flex;
       align-items: center;
       gap: 10px;
-      width: 100%;
-      padding: 8px 10px;
+      flex: 1;       /* Task 4 wraps btn+chevron in a flex-row; flex:1 fills remaining space */
+      min-width: 0;
+      min-height: 44px;     /* guarantee WCAG 44px touch target */
+      padding: 12px 10px;
       border: none;
       border-radius: 6px;
       background: transparent;
@@ -238,26 +264,31 @@ TEMPLATE.innerHTML = `
       margin-left: 2px;
       flex-shrink: 0;
     }
-    .protocol-btn .proto-chevron {
-      width: 24px;
-      height: 24px;
+    .proto-chevron {
+      width: 36px;
+      min-height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      font: inherit;
       border-radius: 4px;
       flex-shrink: 0;
       cursor: pointer;
       transition: background 0.1s;
     }
-    .protocol-btn .proto-chevron:hover {
+    .proto-chevron:hover {
       background: rgba(0, 0, 0, 0.06);
     }
-    .protocol-btn .proto-chevron svg {
+    .proto-chevron svg {
       width: 14px;
       height: 14px;
       transition: transform 0.15s;
     }
-    .protocol-btn .proto-chevron.expanded svg {
+    .proto-chevron.expanded svg {
       transform: rotate(90deg);
     }
 
@@ -270,7 +301,8 @@ TEMPLATE.innerHTML = `
       align-items: center;
       gap: 8px;
       width: 100%;
-      padding: 6px 10px;
+      min-height: 44px;     /* guarantee WCAG 44px touch target */
+      padding: 10px 10px;
       border: none;
       border-radius: 6px;
       background: transparent;
@@ -357,7 +389,7 @@ TEMPLATE.innerHTML = `
       align-items: center;
       gap: 10px;
       width: 100%;
-      padding: 7px 10px;
+      padding: 12px 10px;
       border: none;
       border-radius: 6px;
       background: transparent;
@@ -438,12 +470,12 @@ TEMPLATE.innerHTML = `
       box-sizing: border-box;
       background: var(--atshare-bg, #ffffff);
       color: var(--atshare-color, #0f172a);
-      outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .popover-input:focus {
+      outline: 2px solid var(--atshare-accent, #64DFDF);
+      outline-offset: 1px;
       border-color: var(--atshare-accent, #64DFDF);
-      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
     }
     .popover-action-btn {
       align-self: flex-end;
@@ -498,7 +530,8 @@ TEMPLATE.innerHTML = `
       color: var(--_muted);
       background: none;
       border: none;
-      padding: 0;
+      min-height: 36px;
+      padding: 6px 0;
       cursor: pointer;
       text-align: left;
     }
@@ -516,7 +549,7 @@ TEMPLATE.innerHTML = `
     }
     .signin-handle-wrap input { width: 100%; }
     .signin-handle-wrap input.error { border-color: #ef4444; }
-    .signin-handle-wrap input.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+    .signin-handle-wrap input.error:focus { outline: 2px solid #ef4444; outline-offset: 1px; }
     .signin-handle-wrap .signin-error {
       font-size: 11px;
       color: #ef4444;
@@ -534,7 +567,8 @@ TEMPLATE.innerHTML = `
       background: none;
       border: none;
       cursor: pointer;
-      padding: 0;
+      min-height: 36px;
+      padding: 6px 4px;
     }
     .signin-input-cancel-btn:hover { color: var(--_muted-hover); }
 
@@ -553,7 +587,8 @@ TEMPLATE.innerHTML = `
       background: none;
       border: none;
       cursor: pointer;
-      padding: 0;
+      min-height: 36px;
+      padding: 6px 4px;
     }
     .signin-waiting .signin-cancel-btn:hover { color: var(--_muted-hover); }
 
@@ -572,7 +607,8 @@ TEMPLATE.innerHTML = `
       background: none;
       border: none;
       cursor: pointer;
-      padding: 0;
+      min-height: 36px;
+      padding: 6px 4px;
     }
     .signin-signout-btn:hover { color: var(--_muted-hover); }
 
@@ -589,6 +625,16 @@ TEMPLATE.innerHTML = `
     .default-view.hidden {
       display: none;
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 
   <div style="position: relative; display: inline-block;">
@@ -602,7 +648,7 @@ TEMPLATE.innerHTML = `
       </g>
     </svg>
 
-    <button class="trigger" part="trigger" aria-label="Share via atShare">
+    <button class="trigger" part="trigger" aria-label="Share via atShare" aria-expanded="false" aria-haspopup="dialog">
       <div class="trigger-fill"></div>
       <span class="trigger-at">@</span>
       <span class="label-text">
@@ -611,12 +657,12 @@ TEMPLATE.innerHTML = `
       </span>
     </button>
 
-    <div class="popover" role="dialog" aria-label="Share to...">
+    <div class="popover" role="dialog" aria-modal="true" aria-label="Share to...">
       <div class="default-view">
         <div class="network-list"></div>
         <div class="mastodon-input-wrap">
-          <label>Your Mastodon instance</label>
-          <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input popover-input">
+          <label for="atshare-mastodon-input">Your Mastodon instance</label>
+          <input id="atshare-mastodon-input" type="url" placeholder="https://mastodon.social" class="mastodon-instance-input popover-input">
           <button class="mastodon-go-btn popover-action-btn">Share</button>
         </div>
         <button class="more-link">More destinations</button>
@@ -626,9 +672,9 @@ TEMPLATE.innerHTML = `
         <button class="signin-link">Sign in</button>
 
         <div class="signin-handle-wrap">
-          <label>Your ATProto handle</label>
-          <input type="text" class="signin-handle-input popover-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
-          <span class="signin-error"></span>
+          <label for="atshare-handle-input">Your ATProto handle</label>
+          <input id="atshare-handle-input" type="text" class="signin-handle-input popover-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
+          <span class="signin-error" role="alert"></span>
           <div class="signin-handle-actions">
             <button class="signin-btn popover-action-btn">Sign in</button>
             <button class="signin-input-cancel-btn">Cancel</button>
@@ -646,7 +692,7 @@ TEMPLATE.innerHTML = `
         </div>
       </div>
       <div class="divider"></div>
-      <div class="footer"><a href="https://atshare.social" target="_blank" rel="noopener">atShare</a></div>
+      <div class="footer"><a href="https://atshare.social" target="_blank" rel="noopener noreferrer" aria-label="Learn more about atShare (opens in new tab)">atShare</a></div>
     </div>
   </div>
 `;
