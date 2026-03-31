@@ -198,7 +198,7 @@
       position: relative;
       padding: 104px 0 88px;
       text-align: center;
-      overflow: hidden;
+      overflow: visible;
     }
     .hero-bg-mark {
       position: absolute;
@@ -896,6 +896,13 @@
   if (prefersReducedMotion) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
   } else {
+    // Parallax on hero background mark — moves at half scroll speed
+    const heroBgMark = document.querySelector('.hero-bg-mark');
+    if (heroBgMark) {
+      window.addEventListener('scroll', () => {
+        heroBgMark.style.transform = `translateY(calc(-52% + ${window.scrollY * 0.5}px))`;
+      }, { passive: true });
+    }
     const ro = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (e.isIntersecting) {
