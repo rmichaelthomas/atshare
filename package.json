@@ -1,9 +1,20 @@
 {
   "name": "@atshare/selector",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Universal open social share selector for AT Protocol and ActivityPub networks",
   "type": "module",
-  "main": "src/atshare-selector.js",
+  "main": "dist/atshare-selector.umd.cjs",
+  "module": "dist/atshare-selector.js",
+  "exports": {
+    ".": {
+      "import": "./dist/atshare-selector.js",
+      "require": "./dist/atshare-selector.umd.cjs"
+    }
+  },
+  "files": [
+    "dist/atshare-selector.js",
+    "dist/atshare-selector.umd.cjs"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
