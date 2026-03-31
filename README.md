@@ -10,7 +10,7 @@
 A share button that lets people pick their network — and remembers their choice across every site.
 
 <p align="center">
-  <video src="demo.mp4" width="640"></video>
+  <img src="demo.gif" width="640" alt="atShare demo" />
 </p>
 
 ---
