@@ -547,6 +547,88 @@
     }
     .footer-copy a:hover { color: var(--seafoam); }
 
+    /* ── Builder ── */
+    .builder-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 0 64px;
+      align-items: start;
+    }
+    @media (max-width: 760px) {
+      .builder-layout {
+        grid-template-columns: 1fr;
+        gap: 40px 0;
+      }
+    }
+    .builder-meta .eyebrow { margin-bottom: 14px; }
+    .builder-meta .section-h { margin-bottom: 0; }
+    .builder-text p {
+      font-family: var(--font-body);
+      font-size: 16px;
+      color: var(--n300);
+      line-height: 1.75;
+      margin-bottom: 20px;
+    }
+    .builder-text p:last-of-type { margin-bottom: 0; }
+    .builder-text a {
+      color: var(--seafoam);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(100, 223, 223, 0.25);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .builder-text a:hover {
+      color: var(--seafoam-100);
+      border-bottom-color: var(--seafoam);
+    }
+    .builder-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 36px;
+    }
+    .builder-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--n400);
+      text-decoration: none;
+      padding: 6px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .builder-link:hover {
+      color: var(--seafoam);
+      border-color: var(--border-strong);
+      background: rgba(100, 223, 223, 0.05);
+    }
+    .builder-link svg {
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .builder-handle {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--n400);
+      text-decoration: none;
+      background: rgba(100, 223, 223, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 11px;
+      letter-spacing: 0.02em;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .builder-handle:hover {
+      color: var(--seafoam);
+      border-color: var(--border-strong);
+      background: rgba(100, 223, 223, 0.05);
+    }
+
     /* ── Accessibility ── */
     :focus-visible {
       outline: 2px solid var(--seafoam);
@@ -695,6 +777,46 @@
         <div class="step-num" aria-hidden="true">4</div>
         <p class="step-title">Remembered everywhere</p>
         <p class="step-body">Every site running atShare reads that preference. Their network follows them — no new accounts, no tracking.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Builder ── -->
+<section class="section" aria-labelledby="builder-h">
+  <div class="wrap">
+    <div class="builder-layout">
+      <div class="builder-meta reveal">
+        <p class="eyebrow">Builder</p>
+        <h2 class="section-h" id="builder-h">Who is building this.</h2>
+      </div>
+
+      <div class="builder-text reveal d1">
+        <p>
+          Designed and built by <a href="https://blacksky.community/profile/rmichaelthomas.com" target="_blank" rel="noopener noreferrer">R. Michael Thomas</a> — an independent developer building open, portable infrastructure for the AT Protocol ecosystem. atShare is part of a small but growing collection of tools aimed at making the open social web as frictionless as the closed one.
+        </p>
+        <p>
+          The <code style="font-family: var(--font-mono); font-size: 14px; color: var(--seafoam); background: rgba(100,223,223,0.07); padding: 1px 6px; border-radius: 4px;">social.atshare.preference</code> lexicon record is the core innovation here — a single AT Protocol record type that stores where a person likes to share, living on their own PDS and readable by any site embedding atShare. No central registry. No account on our end. Portable by design.
+        </p>
+        <p>
+          atShare is open source and built to compose. Publishers, developers, and open-web communities are all welcome. If you ship content — articles, portfolios, projects, anything — atShare gives your readers a share button that respects where they actually live online.
+        </p>
+
+        <div class="builder-links">
+          <a href="https://github.com/rmichaelthomas/atshare" class="builder-link" target="_blank" rel="noopener noreferrer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            GitHub
+          </a>
+          <a href="https://blacksky.community/profile/rmichaelthomas.com" class="builder-link" target="_blank" rel="noopener noreferrer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Blacksky
+          </a>
+          <a href="mailto:rmichael@rmichaelthomas.com" class="builder-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            rmichael@rmichaelthomas.com
+          </a>
+          <a href="https://rmichaelthomas.com" class="builder-handle" target="_blank" rel="noopener noreferrer">@rmichaelthomas.com</a>
+        </div>
       </div>
     </div>
   </div>
