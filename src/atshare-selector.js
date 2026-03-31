@@ -802,10 +802,19 @@ class AtshareSelector extends HTMLElement {
         this._closePopover();
       }
     };
+
+    // Escape key closes popover
+    this._onKeyDown = (e) => {
+      if (e.key === 'Escape' && this._open) {
+        e.preventDefault();
+        this._closePopover();
+      }
+    };
   }
 
   connectedCallback() {
     document.addEventListener('click', this._onDocumentClick, { passive: true });
+    document.addEventListener('keydown', this._onKeyDown);
     this._render();
     this._tryRestoreSession();
     this._tryBackgroundPreferenceRead();
@@ -813,6 +822,7 @@ class AtshareSelector extends HTMLElement {
 
   disconnectedCallback() {
     document.removeEventListener('click', this._onDocumentClick);
+    document.removeEventListener('keydown', this._onKeyDown);
   }
 
   /**
@@ -914,12 +924,20 @@ class AtshareSelector extends HTMLElement {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;flex-direction:column;';
 
+      // Flex-row wrapper: btn takes remaining space, chevron is fixed-width sibling
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;align-items:stretch;';
+
       const btn = document.createElement('button');
       btn.className = 'protocol-btn';
       if (isPreferred) {
         btn.classList.add('preferred');
         btn.style.background = this._hexToRgba(protocol.color, 0.06);
       }
+      // Aria-label communicates preferred state
+      btn.setAttribute('aria-label',
+        `Share via ${protocol.label}${isPreferred ? ' (preferred)' : ''}`
+      );
 
       // Icon
       const iconWrap = document.createElement('span');
@@ -951,32 +969,37 @@ class AtshareSelector extends HTMLElement {
         check.className = 'proto-check';
         check.style.color = protocol.color;
         check.textContent = '\u2713';
+        check.setAttribute('aria-hidden', 'true');
         btn.appendChild(check);
       }
 
-      // Chevron
-      const chevron = document.createElement('span');
+      // Click btn to share — no chevron guard needed since chevron is now a sibling
+      btn.addEventListener('click', () => {
+        this._handleClientShare(displayClient);
+      });
+
+      // Chevron is now a <button> sibling — avoids nested <button> invalid HTML
+      const isExpanded = this._expandedProtocol === protocol.id;
+      const chevron = document.createElement('button');
+      chevron.type = 'button';
       chevron.className = 'proto-chevron';
-      if (this._expandedProtocol === protocol.id) {
-        chevron.classList.add('expanded');
-      }
+      if (isExpanded) chevron.classList.add('expanded');
+      chevron.setAttribute('aria-label',
+        `${isExpanded ? 'Collapse' : 'Expand'} ${protocol.label} clients`
+      );
+      chevron.setAttribute('aria-expanded', String(isExpanded));
       chevron.innerHTML = CHEVRON_SVG;
       chevron.addEventListener('click', (e) => {
         e.stopPropagation();
         this._toggleExpanded(protocol.id);
       });
-      btn.appendChild(chevron);
 
-      // Click the button area (not chevron) to share
-      btn.addEventListener('click', (e) => {
-        if (e.target.closest('.proto-chevron')) return;
-        this._handleClientShare(displayClient);
-      });
+      btnRow.appendChild(btn);
+      btnRow.appendChild(chevron);
+      row.appendChild(btnRow);
 
-      row.appendChild(btn);
-
-      // Expanded client sub-list
-      if (this._expandedProtocol === protocol.id) {
+      // Expanded client sub-list (unchanged position in structure)
+      if (isExpanded) {
         const clientListEl = this._renderClientList(protocol, localPref);
         row.appendChild(clientListEl);
       }
@@ -1009,6 +1032,9 @@ class AtshareSelector extends HTMLElement {
       if (isPreferredClient) {
         btn.classList.add('preferred');
       }
+      btn.setAttribute('aria-label',
+        `${client.name}${isPreferredClient ? ' (preferred)' : ''}`
+      );
 
       // Colored dot
       const dot = document.createElement('span');
@@ -1027,6 +1053,7 @@ class AtshareSelector extends HTMLElement {
         check.className = 'client-check';
         check.style.color = protocol.color;
         check.textContent = '\u2713';
+        check.setAttribute('aria-hidden', 'true');
         btn.appendChild(check);
       }
 
@@ -1085,6 +1112,10 @@ class AtshareSelector extends HTMLElement {
         const isPreferred = localPref?.primaryNetwork === protocol.id
           && localPref?.preferredClient === client.id;
 
+        item.setAttribute('aria-label',
+          `Share via ${client.name}${isPreferred ? ' (preferred)' : ''}`
+        );
+
         // Icon or dot
         if (client.icon && ICONS[client.icon]) {
           const iconWrap = document.createElement('span');
@@ -1109,6 +1140,7 @@ class AtshareSelector extends HTMLElement {
           check.className = 'item-check';
           check.style.color = protocol.color;
           check.textContent = '\u2713';
+          check.setAttribute('aria-hidden', 'true');
           item.appendChild(check);
         }
 
@@ -1189,11 +1221,33 @@ class AtshareSelector extends HTMLElement {
     this._defaultView.classList.remove('hidden');
     this._renderNetworks();
     this._popover.classList.add('open');
+    this._trigger.setAttribute('aria-expanded', 'true');
+
+    // Viewport edge detection — flip popover left-aligned when it would overflow right edge
+    if (window.innerWidth > 400) {
+      const rect = this._trigger.getBoundingClientRect();
+      const popoverMaxWidth = 288;
+      if (rect.left + popoverMaxWidth > window.innerWidth - 16) {
+        this._popover.style.right = '0';
+        this._popover.style.left = 'auto';
+      } else {
+        this._popover.style.right = '';
+        this._popover.style.left = '';
+      }
+    }
+
+    // Move focus to first focusable element in popover
+    requestAnimationFrame(() => {
+      const focusable = this._popover.querySelector('button:not([disabled]), input, a[href]');
+      if (focusable) focusable.focus();
+    });
   }
 
   _closePopover() {
     this._open = false;
     this._popover.classList.remove('open');
+    this._trigger.setAttribute('aria-expanded', 'false');
+    this._trigger.focus();
   }
 
   _onMastodonGo() {
