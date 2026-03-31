@@ -20,6 +20,8 @@ jobs:
         run: |
           mkdir -p deploy/dist
           mkdir -p deploy/demo
+          mkdir -p deploy/.well-known
+          mkdir -p deploy/lexicons
 
           # Landing page
           cp index.html deploy/
@@ -38,6 +40,10 @@ jobs:
           cp public/apple-touch-icon.png deploy/
           cp public/robots.txt deploy/
           cp public/.htaccess deploy/
+
+          # Lexicon + DID document
+          cp public/lexicons/social.atshare.preference.json deploy/lexicons/
+          cp public/.well-known/did.json deploy/.well-known/
 
       - name: Deploy via SCP
         run: |
@@ -61,6 +67,11 @@ jobs:
           scp $SCP_OPTS deploy/apple-touch-icon.png "${REMOTE}:${DEST}/apple-touch-icon.png"
           scp $SCP_OPTS deploy/robots.txt "${REMOTE}:${DEST}/robots.txt"
           scp $SCP_OPTS deploy/.htaccess "${REMOTE}:${DEST}/.htaccess"
+
+          # Lexicon + DID document (create dirs first, then copy)
+          ssh $SCP_OPTS "${REMOTE}" "mkdir -p ${DEST}/lexicons ${DEST}/.well-known"
+          scp $SCP_OPTS deploy/lexicons/social.atshare.preference.json "${REMOTE}:${DEST}/lexicons/social.atshare.preference.json"
+          scp $SCP_OPTS deploy/.well-known/did.json "${REMOTE}:${DEST}/.well-known/did.json"
 
           echo "Deploy complete. Verifying..."
 
