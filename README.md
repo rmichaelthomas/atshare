@@ -9,17 +9,9 @@
 
 A share button that lets people pick their network — and remembers their choice across every site.
 
-<!-- DEMO GIF PLACEHOLDER
-Add an animated GIF here showing:
-1. The trigger button in its default state (with orbiting @ symbols)
-2. Hover state (Seafoam fill wash, @ panel slides in, label swaps to "atShare")
-3. Click → selector popover appears with network options
-4. User picks a network → share intent opens
-
-This single GIF is worth more than any amount of text for star conversion.
-Recommended tools: ScreenToGif, Gifski, or vhs (terminal recorder).
-Target size: 640px wide, ~5 seconds, looping.
--->
+<p align="center">
+  <video src="demo.mp4" width="640"></video>
+</p>
 
 ---
 
