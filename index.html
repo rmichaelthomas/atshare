@@ -3,481 +3,756 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>atShare — Universal share selector for the open social web</title>
-  <meta name="description" content="Drop a single script tag onto any page and give your readers one-click sharing to Bluesky, Mastodon, and more. Zero dependencies, themeable, preference memory.">
+  <title>atShare — One button to reach them all</title>
+  <meta name="description" content="The share button the open web was missing. Bluesky, Mastodon, and more — with portable preferences stored on each person's own PDS.">
   <link rel="canonical" href="https://atshare.social">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <meta property="og:title" content="atShare — Share button for the open social web">
-  <meta property="og:description" content="Drop a single script tag onto any page and give your readers one-click sharing to Bluesky, Mastodon, and more. Zero dependencies, themeable, preference memory.">
+  <meta property="og:title" content="atShare — One button to reach them all">
+  <meta property="og:description" content="The share button the open web was missing. Bluesky, Mastodon, and more — with portable preferences stored on each person's own PDS.">
   <meta property="og:image" content="https://atshare.social/og.png">
   <meta property="og:url" content="https://atshare.social">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="atShare">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="atShare — Share button for the open social web">
-  <meta name="twitter:description" content="Drop a single script tag onto any page and give your readers one-click sharing to Bluesky, Mastodon, and more. Zero dependencies, themeable, preference memory.">
+  <meta name="twitter:title" content="atShare — One button to reach them all">
+  <meta name="twitter:description" content="The share button the open web was missing. Bluesky, Mastodon, and more — with portable preferences stored on each person's own PDS.">
   <meta name="twitter:image" content="https://atshare.social/og.png">
-  <meta name="theme-color" content="#1A1A2E">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
+  <meta name="theme-color" content="#0E0E1A">
 
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 0 24px 80px;
-      color: #0f172a;
-      background: #ffffff;
-      line-height: 1.6;
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&family=Albert+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ── */
+    :root {
+      --seafoam-50:  #E8FAFA;
+      --seafoam-100: #B0EDED;
+      --seafoam-200: #89E5E5;
+      --seafoam:     #64DFDF;
+      --seafoam-600: #3DBFBF;
+      --seafoam-800: #2A8F8F;
+      --seafoam-900: #1A5C5C;
+      --ink:         #1A1A2E;
+      --ink-600:     #2D2D42;
+      --ink-850:     #131322;
+      --ink-900:     #0E0E1A;
+      --n50:  #F5F5F7;
+      --n100: #E8E8EC;
+      --n200: #B0B0BC;
+      --n300: #8A8A9A;
+      --n400: #55556A;
+      --border:        rgba(100, 223, 223, 0.10);
+      --border-strong: rgba(100, 223, 223, 0.18);
+      --font-display: 'Urbanist', sans-serif;
+      --font-body:    'Albert Sans', sans-serif;
+      --font-mono:    'SF Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+      --max-w: 1100px;
+      --section-py: 112px;
     }
 
-    /* --- Header --- */
-    header {
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--ink-900);
+      color: var(--n100);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* ── Container ── */
+    .wrap {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    @media (max-width: 640px) { .wrap { padding: 0 20px; } }
+
+    /* ── Scroll reveal ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .d1 { transition-delay: 0.08s; }
+    .d2 { transition-delay: 0.16s; }
+    .d3 { transition-delay: 0.24s; }
+    .d4 { transition-delay: 0.32s; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 20px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--seafoam);
+      color: var(--ink);
+    }
+    .btn-primary:hover {
+      background: var(--seafoam-200);
+      box-shadow: 0 0 22px rgba(100, 223, 223, 0.28);
+    }
+    .btn-primary:active { background: var(--seafoam-600); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--n200);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-ghost:hover {
+      background: rgba(100, 223, 223, 0.06);
+      color: var(--n100);
+      border-color: rgba(100, 223, 223, 0.32);
+    }
+    .btn-lg { font-size: 15px; padding: 12px 26px; border-radius: 10px; }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background 0.25s, border-color 0.25s;
+      border-bottom: 1px solid transparent;
+    }
+    .nav.scrolled {
+      background: rgba(14, 14, 26, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom-color: var(--border);
+    }
+    .nav-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 24px 0;
-      flex-wrap: wrap;
-      gap: 12px;
+      height: 64px;
     }
     .wordmark {
-      font-size: 1.2rem;
+      font-family: var(--font-display);
       font-weight: 700;
+      font-size: 21px;
+      line-height: 1;
+      color: var(--n100);
       text-decoration: none;
-      color: #0f172a;
+      letter-spacing: -0.01em;
     }
-
-    /* --- Mode switcher --- */
-    .mode-switcher {
-      display: inline-flex;
-      background: #f1f5f9;
-      border-radius: 8px;
-      padding: 3px;
-    }
-    .mode-btn {
-      padding: 6px 16px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      font-size: 13px;
-      font-family: inherit;
-      color: #64748b;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-    }
-    .mode-btn.active {
-      background: #ffffff;
-      color: #0f172a;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    /* --- Mode visibility --- */
-    body[data-mode="dev"] .plain-only { display: none !important; }
-    body[data-mode="plain"] .dev-only { display: none !important; }
-
-    /* --- Sections --- */
-    section { margin-top: 72px; }
-    section:first-of-type { margin-top: 40px; }
-
-    h1 { font-size: 2rem; margin: 0 0 8px; line-height: 1.2; }
-    h2 { font-size: 1.25rem; margin: 0 0 16px; }
-    .tagline { color: #475569; font-size: 1.1rem; margin: 0 0 32px; }
-    p { color: #475569; font-size: 15px; }
-    p.muted { color: #94a3b8; font-size: 13px; }
-
-    /* --- Hero demo --- */
-    .hero-demo {
+    .wordmark .at { color: var(--seafoam); }
+    .nav-right {
       display: flex;
-      justify-content: center;
-      padding: 40px 0;
+      align-items: center;
+      gap: 4px;
     }
+    .nav-link {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--n300);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 7px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-link:hover { color: var(--n100); background: rgba(255,255,255,0.04); }
 
-    /* --- Code blocks --- */
-    .code-wrap {
+    /* ── Hero ── */
+    .hero {
       position: relative;
-      margin: 16px 0;
+      padding: 104px 0 88px;
+      text-align: center;
+      overflow: hidden;
     }
-    pre {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 16px 20px;
-      overflow-x: auto;
-      font-size: 13px;
-      line-height: 1.5;
-      margin: 0;
-    }
-    code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
-    .copy-btn {
+    .hero-bg-mark {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      padding: 4px 10px;
-      border: 1px solid #e2e8f0;
-      border-radius: 4px;
-      background: #fff;
-      font-size: 11px;
-      color: #64748b;
-      cursor: pointer;
-      font-family: inherit;
+      top: 50%;
+      right: -4%;
+      transform: translateY(-52%);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: clamp(260px, 42vw, 620px);
+      line-height: 1;
+      color: var(--seafoam);
+      opacity: 0.035;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
     }
-    .copy-btn:hover { background: #f8fafc; }
-
-    /* --- Steps --- */
-    .steps {
-      counter-reset: step;
-      list-style: none;
-      padding: 0;
-    }
-    .steps li {
-      counter-increment: step;
-      padding: 0 0 16px 36px;
+    .hero-body {
       position: relative;
-      color: #475569;
-      font-size: 15px;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
     }
-    .steps li::before {
-      content: counter(step);
-      position: absolute;
-      left: 0;
-      width: 24px;
-      height: 24px;
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(100, 223, 223, 0.07);
+      border: 1px solid var(--border-strong);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--seafoam);
+      letter-spacing: 0.04em;
+      margin-bottom: 32px;
+    }
+    .hero-badge-dot {
+      display: block;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #f1f5f9;
-      color: #475569;
-      font-size: 13px;
-      font-weight: 600;
+      background: var(--seafoam);
+      opacity: 0.65;
+      flex-shrink: 0;
+    }
+    .hero-h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(38px, 5.5vw, 56px);
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      color: var(--n100);
+      margin-bottom: 20px;
+    }
+    .hero-tagline {
+      font-family: var(--font-body);
+      font-size: clamp(16px, 2vw, 18px);
+      font-weight: 400;
+      color: var(--n300);
+      line-height: 1.65;
+      max-width: 520px;
+      margin: 0 auto 40px;
+    }
+    .hero-ctas {
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    /* --- Theme cards --- */
-    .theme-row {
-      display: flex;
-      gap: 16px;
+      gap: 10px;
       flex-wrap: wrap;
-    }
-    .theme-card {
-      flex: 1;
-      min-width: 200px;
-      padding: 24px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-    }
-    .theme-card h3 {
-      font-size: 13px;
-      margin: 0 0 16px;
-      color: #64748b;
-      font-weight: 500;
-    }
-    .theme-card.dark {
-      background: #0f172a;
-      border-color: #1e293b;
-    }
-    .theme-card.dark h3 { color: #94a3b8; }
-    .theme-card.custom {
-      background: #faf5ff;
-      border-color: #e9d5ff;
-    }
-    .theme-card.custom h3 { color: #7c3aed; }
-
-    /* Dark theme overrides */
-    .theme-card.dark atshare-selector {
-      --atshare-bg: #1e293b;
-      --atshare-bg-hover: #334155;
-      --atshare-color: #f8fafc;
-      --atshare-border: #334155;
-      --atshare-accent: #64DFDF;
-    }
-    /* Custom theme overrides */
-    .theme-card.custom atshare-selector {
-      --atshare-accent: #7c3aed;
-      --atshare-radius: 20px;
-      --atshare-border: #e9d5ff;
-      --atshare-bg-hover: #f5f3ff;
+      margin-bottom: 64px;
     }
 
-    /* --- Table --- */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      margin: 16px 0;
-    }
-    th {
-      text-align: left;
-      padding: 8px 12px;
-      border-bottom: 2px solid #e2e8f0;
-      font-weight: 600;
-      color: #475569;
-    }
-    td {
-      padding: 8px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      color: #475569;
-    }
-    td code {
-      background: #f1f5f9;
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-size: 12px;
-    }
-
-    /* --- Preference explainer --- */
-    .pref-points { padding: 0; list-style: none; }
-    .pref-points li {
-      padding: 12px 0;
-      border-bottom: 1px solid #f1f5f9;
-      color: #475569;
-      font-size: 15px;
-    }
-    .pref-points li:last-child { border-bottom: none; }
-    .pref-points li strong { color: #0f172a; }
-
-    /* --- Footer --- */
-    footer {
-      margin-top: 80px;
-      padding-top: 24px;
-      border-top: 1px solid #e2e8f0;
+    /* Demo showcase */
+    .demo-frame {
+      max-width: 420px;
+      margin: 0 auto 44px;
+      background: var(--ink-850);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
       display: flex;
-      gap: 24px;
-      font-size: 13px;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
     }
-    footer a {
-      color: #94a3b8;
-      text-decoration: none;
+    .demo-label {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--n400);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
-    footer a:hover { color: #64748b; }
+    .demo-frame atshare-selector {
+      --atshare-bg: #1c1c30;
+      --atshare-bg-hover: #242438;
+      --atshare-color: #E8E8EC;
+      --atshare-border: rgba(100, 223, 223, 0.14);
+      --atshare-accent: #64DFDF;
+      --atshare-accent-text: #0E0E1A;
+    }
 
-    /* --- Responsive --- */
-    @media (max-width: 600px) {
-      h1 { font-size: 1.5rem; }
-      .tagline { font-size: 1rem; }
-      .theme-row { flex-direction: column; }
+    /* Code snippet */
+    .code-block {
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--ink-850);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: left;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-dots {
+      display: flex;
+      gap: 5px;
+    }
+    .code-dots i {
+      display: block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ink-600);
+    }
+    .code-name {
+      font-family: var(--font-body);
+      font-size: 11px;
+      color: var(--n400);
+      letter-spacing: 0.05em;
+    }
+    .copy-btn {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--n400);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .copy-btn:hover {
+      color: var(--seafoam);
+      background: rgba(100, 223, 223, 0.08);
+    }
+    pre {
+      padding: 20px 20px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.75;
+      overflow-x: auto;
+    }
+    code { font-family: inherit; }
+    /* Syntax highlight tokens */
+    .t-tag  { color: var(--n300); }
+    .t-attr { color: var(--seafoam); }
+    .t-str  { color: var(--seafoam-100); }
+
+    /* ── Section base ── */
+    .section {
+      padding: var(--section-py) 0;
+      border-top: 1px solid var(--border);
+    }
+    .eyebrow {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--seafoam);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .section-h {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(28px, 3.5vw, 38px);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--n100);
+      max-width: 440px;
+      margin-bottom: 56px;
+    }
+
+    /* ── Value props ── */
+    .vp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    @media (max-width: 680px) {
+      .vp-grid { grid-template-columns: 1fr; }
+    }
+    .vp-card {
+      background: var(--ink-900);
+      padding: 40px;
+      transition: background 0.2s ease;
+    }
+    .vp-card:hover { background: var(--ink-850); }
+    .vp-num {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--seafoam);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.6;
+      margin-bottom: 18px;
+    }
+    .vp-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 19px;
+      color: var(--n100);
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .vp-body {
+      font-family: var(--font-body);
+      font-size: 15px;
+      color: var(--n300);
+      line-height: 1.65;
+    }
+
+    /* ── How it works ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      position: relative;
+      margin-top: 56px;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 19px;
+      left: calc(12.5% + 14px);
+      right: calc(12.5% + 14px);
+      height: 1px;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(100, 223, 223, 0.3) 20%,
+        rgba(100, 223, 223, 0.3) 80%,
+        transparent
+      );
+      z-index: 0;
+    }
+    @media (max-width: 720px) {
+      .steps { grid-template-columns: 1fr 1fr; gap: 40px 24px; }
+      .steps::before { display: none; }
+    }
+    @media (max-width: 480px) {
+      .steps { grid-template-columns: 1fr; }
+    }
+    .step {
+      padding: 0 20px;
+      position: relative;
+    }
+    .step-num {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: var(--ink-850);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--seafoam);
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--n100);
+      margin-bottom: 8px;
+    }
+    .step-body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--n400);
+      line-height: 1.6;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+    }
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .footer-tagline {
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--n400);
+    }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+    .footer-link {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--n400);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .footer-link:hover {
+      color: var(--seafoam);
+      background: rgba(100, 223, 223, 0.06);
+    }
+    .footer-sep {
+      color: var(--ink-600);
+      font-size: 12px;
+      padding: 0 2px;
+      user-select: none;
+    }
+    .footer-copy {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--n400);
+    }
+    .footer-copy a {
+      color: var(--n400);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-copy a:hover { color: var(--seafoam); }
+
+    /* ── Accessibility ── */
+    :focus-visible {
+      outline: 2px solid var(--seafoam);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
     }
   </style>
 </head>
-<body data-mode="plain">
+<body>
 
-  <!-- Header -->
-  <header>
-    <span class="wordmark">atShare</span>
-    <div class="mode-switcher" role="tablist" aria-label="Content mode">
-      <button class="mode-btn active" role="tab" aria-selected="true" data-mode="plain">Plain English</button>
-      <button class="mode-btn" role="tab" aria-selected="false" data-mode="dev">Developer</button>
-    </div>
-  </header>
-
-  <!-- Hero -->
-  <section>
-    <h1>A share button for the open social web</h1>
-    <p class="tagline">One script tag. Zero dependencies. Share to ATProto clients, Fediverse, and more.</p>
-
-    <div class="hero-demo">
-      <atshare-selector
-        url="https://atshare.social"
-        text="Check out atShare — a universal share selector for the open social web:">
-      </atshare-selector>
-    </div>
-
-    <div class="plain-only">
-      <p>Add a share button to your site that lets readers pick their destination: Bluesky, other ATProto clients, Mastodon or any Fediverse instance, traditional social networks, or just copy to clipboard. Their choice is remembered automatically. If they sign in with their ATProto handle, the preference syncs across every site running atShare — stored on their own server, not yours.</p>
-    </div>
-
-    <div class="dev-only">
-      <p>The component above is a live <code>&lt;atshare-selector&gt;</code>. Here's the markup:</p>
-      <div class="code-wrap">
-        <pre><code>&lt;atshare-selector
-  url="https://atshare.social"
-  text="Check out atShare:"&gt;
-&lt;/atshare-selector&gt;
-
-&lt;script type="module"
-  src="https://atshare.social/dist/atshare-selector.js"&gt;
-&lt;/script&gt;</code></pre>
-        <button class="copy-btn">Copy</button>
+<!-- ── Nav ── -->
+<nav class="nav" id="nav" aria-label="Main navigation">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="/" class="wordmark" aria-label="atShare — home">
+        <span class="at">@</span>Share
+      </a>
+      <div class="nav-right">
+        <a href="https://github.com/rmichaelthomas/atshare" class="nav-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="#install" class="btn btn-primary">Get started</a>
       </div>
     </div>
-  </section>
+  </div>
+</nav>
 
-  <!-- Quick Start -->
-  <section>
-    <h2>Quick Start</h2>
+<!-- ── Hero ── -->
+<section class="hero" aria-labelledby="hero-h1">
+  <div class="hero-bg-mark" aria-hidden="true">@</div>
 
-    <div class="plain-only">
-      <ol class="steps">
-        <li>
-          Copy this snippet into your page's HTML, anywhere you want a share button:
-          <div class="code-wrap" style="margin-top:12px;">
-            <pre><code>&lt;atshare-selector url="https://yoursite.com/post"&gt;
-&lt;/atshare-selector&gt;
+  <div class="wrap">
+    <div class="hero-body">
 
-&lt;script type="module"
-  src="https://atshare.social/dist/atshare-selector.js"&gt;
-&lt;/script&gt;</code></pre>
-            <button class="copy-btn">Copy</button>
+      <div class="hero-badge reveal">
+        <span class="hero-badge-dot"></span>
+        Open source · Community-built
+      </div>
+
+      <h1 class="hero-h1 reveal d1" id="hero-h1">
+        One button to reach them all.
+      </h1>
+
+      <p class="hero-tagline reveal d2">
+        A share button that lets people pick their network — and remembers their choice across every site.
+      </p>
+
+      <div class="hero-ctas reveal d3">
+        <a href="#install" class="btn btn-primary btn-lg">Get started</a>
+        <a href="https://github.com/rmichaelthomas/atshare" class="btn btn-ghost btn-lg" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </div>
+
+      <!-- Live component demo -->
+      <div class="demo-frame reveal d4" role="region" aria-label="Live atShare demo">
+        <span class="demo-label">Try it</span>
+        <atshare-selector
+          url="https://atshare.social"
+          text="Check out atShare — a universal share selector for the open social web:">
+        </atshare-selector>
+      </div>
+
+      <!-- Install snippet -->
+      <div class="code-block reveal d4" id="install">
+        <div class="code-header">
+          <div class="code-dots" aria-hidden="true">
+            <i></i><i></i><i></i>
           </div>
-        </li>
-        <li>Change the <code>url</code> to the page you want shared.</li>
-        <li>Done. Your readers can now share to Bluesky, Mastodon, and other supported destinations.</li>
-      </ol>
-    </div>
-
-    <div class="dev-only">
-      <div class="code-wrap">
-        <pre><code>&lt;atshare-selector
-  url="https://yoursite.com/post/123"
-  text="Check this out:"
-  label="Share this post"&gt;
-&lt;/atshare-selector&gt;
-
-&lt;script type="module"
-  src="https://atshare.social/dist/atshare-selector.js"&gt;
-&lt;/script&gt;</code></pre>
-        <button class="copy-btn">Copy</button>
+          <span class="code-name">your-page.html</span>
+          <button class="copy-btn" data-copy aria-label="Copy code to clipboard">Copy</button>
+        </div>
+        <pre><code><span class="t-tag">&lt;script </span><span class="t-attr">src</span>=<span class="t-str">"https://atshare.social/selector.js"</span><span class="t-tag">&gt;&lt;/script&gt;</span>
+<span class="t-tag">&lt;atshare-selector&gt;&lt;/atshare-selector&gt;</span></code></pre>
       </div>
 
-      <table>
-        <thead>
-          <tr><th>Attribute</th><th>Required</th><th>Default</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>url</code></td><td>yes</td><td>current page URL</td><td>The URL to share</td></tr>
-          <tr><td><code>text</code></td><td>no</td><td>--</td><td>Text prepended to the URL</td></tr>
-          <tr><td><code>label</code></td><td>no</td><td><code>"Share"</code></td><td>Button label</td></tr>
-        </tbody>
-      </table>
-
-      <p class="muted">ES module, ~19 KB. Shadow DOM encapsulated — styles don't leak in or out. Works with any framework or vanilla HTML.</p>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Theming -->
-  <section>
-    <h2>Theming</h2>
+<!-- ── Value props ── -->
+<section class="section" aria-labelledby="vp-h">
+  <div class="wrap">
+    <p class="eyebrow reveal">Why atShare</p>
+    <h2 class="section-h reveal d1" id="vp-h">Built for the open web.</h2>
 
-    <div class="plain-only">
-      <p>atShare picks up your site's look automatically, or you can customize it with a few CSS variables to match your brand.</p>
-    </div>
-
-    <div class="theme-row">
-      <div class="theme-card">
-        <h3>Default</h3>
-        <atshare-selector url="https://atshare.social" text="Default theme example:"></atshare-selector>
+    <div class="vp-grid">
+      <div class="vp-card reveal">
+        <p class="vp-num">01</p>
+        <h3 class="vp-title">Every network, one button.</h3>
+        <p class="vp-body">Bluesky, Blacksky, Mastodon, LinkedIn, and more — your audience picks their destination from a single, clean selector.</p>
       </div>
-      <div class="theme-card dark">
-        <h3>Dark</h3>
-        <atshare-selector url="https://atshare.social" text="Dark theme example:"></atshare-selector>
+
+      <div class="vp-card reveal d1">
+        <p class="vp-num">02</p>
+        <h3 class="vp-title">Preferences that follow.</h3>
+        <p class="vp-body">When someone authenticates, their preferred network is stored on their own PDS — not your site. The next site running atShare already knows where they want to share. Protocol-native and portable.</p>
       </div>
-      <div class="theme-card custom">
-        <h3>Custom</h3>
-        <atshare-selector url="https://atshare.social" text="Custom theme example:"></atshare-selector>
+
+      <div class="vp-card reveal d2">
+        <p class="vp-num">03</p>
+        <h3 class="vp-title">One script tag. Done.</h3>
+        <p class="vp-body">A single web component with zero dependencies. Themeable to match your site. Works everywhere HTML works.</p>
+      </div>
+
+      <div class="vp-card reveal d3">
+        <p class="vp-num">04</p>
+        <h3 class="vp-title">Open source. Community-built.</h3>
+        <p class="vp-body">atShare composes existing open infrastructure — Microcosm for identity resolution, AT Protocol for preference storage. No tracking, no vendor lock-in, no accounts on our end.</p>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="dev-only">
-      <table>
-        <thead>
-          <tr><th>Property</th><th>Default</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><code>--atshare-bg</code></td><td><code>#ffffff</code></td><td>Background</td></tr>
-          <tr><td><code>--atshare-bg-hover</code></td><td><code>#f8fafc</code></td><td>Hover background</td></tr>
-          <tr><td><code>--atshare-color</code></td><td><code>#0f172a</code></td><td>Text color</td></tr>
-          <tr><td><code>--atshare-border</code></td><td><code>#e2e8f0</code></td><td>Border &amp; dividers</td></tr>
-          <tr><td><code>--atshare-accent</code></td><td><code>#64DFDF</code></td><td>Accent (orbit @ symbols, sign-in buttons)</td></tr>
-          <tr><td><code>--atshare-accent-text</code></td><td><code>#1A1A2E</code></td><td>Text color on accent backgrounds (@ panel, label on hover)</td></tr>
-          <tr><td><code>--atshare-orbit</code></td><td><code>1</code></td><td>Set to <code>0</code> to hide orbit animation</td></tr>
-          <tr><td><code>--atshare-radius</code></td><td><code>10px</code></td><td>Border radius</td></tr>
-          <tr><td><code>--atshare-font-size</code></td><td><code>14px</code></td><td>Font size</td></tr>
-        </tbody>
-      </table>
+<!-- ── How it works ── -->
+<section class="section" aria-labelledby="hiw-h">
+  <div class="wrap">
+    <p class="eyebrow reveal">How it works</p>
+    <h2 class="section-h reveal d1" id="hiw-h">Set up in seconds. Works for everyone.</h2>
 
-      <p>Example dark theme:</p>
-      <div class="code-wrap">
-        <pre><code>atshare-selector {
-  --atshare-bg: #1e293b;
-  --atshare-bg-hover: #334155;
-  --atshare-color: #f8fafc;
-  --atshare-border: #334155;
-  --atshare-accent: #64DFDF;
-}</code></pre>
-        <button class="copy-btn">Copy</button>
+    <div class="steps" role="list">
+      <div class="step reveal" role="listitem">
+        <div class="step-num" aria-hidden="true">1</div>
+        <p class="step-title">Embed</p>
+        <p class="step-body">Drop one script tag and a custom element onto your page. No build step. No configuration.</p>
+      </div>
+
+      <div class="step reveal d1" role="listitem">
+        <div class="step-num" aria-hidden="true">2</div>
+        <p class="step-title">User clicks</p>
+        <p class="step-body">A clean selector opens showing every supported network — ATProto clients, Fediverse, and beyond.</p>
+      </div>
+
+      <div class="step reveal d2" role="listitem">
+        <div class="step-num" aria-hidden="true">3</div>
+        <p class="step-title">Picks a network</p>
+        <p class="step-body">They authenticate once with their ATProto handle. Their choice is saved to their own PDS — not your server.</p>
+      </div>
+
+      <div class="step reveal d3" role="listitem">
+        <div class="step-num" aria-hidden="true">4</div>
+        <p class="step-title">Remembered everywhere</p>
+        <p class="step-body">Every site running atShare reads that preference. Their network follows them — no new accounts, no tracking.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- How Preferences Work -->
-  <section>
-    <div class="plain-only">
-      <h2>Remembers your readers' favorite network</h2>
-      <ul class="pref-points">
-        <li><strong>Automatic:</strong> When a reader shares, their choice is remembered on that device. Next time, their network shows a checkmark.</li>
-        <li><strong>Sign in to sync:</strong> Readers can sign in with their ATProto handle (e.g. a Bluesky account) to sync their preference across every site running atShare. One-time setup, works everywhere.</li>
-        <li><strong>Private by design:</strong> No account on your site needed. No tracking. The preference is stored on the reader's own AT Protocol server (PDS), not yours.</li>
-      </ul>
+<!-- ── Footer ── -->
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="footer-left">
+        <a href="/" class="wordmark" style="font-size: 18px;" aria-label="atShare — home">
+          <span class="at">@</span>Share
+        </a>
+        <p class="footer-tagline">Open source. Community-built.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="https://github.com/rmichaelthomas/atshare" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="https://www.npmjs.com/package/@atshare/selector" class="footer-link" target="_blank" rel="noopener noreferrer">npm</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="/demo/" class="footer-link">Demo</a>
+      </nav>
     </div>
+    <p class="footer-copy">
+      © 2026 atShare contributors. Released under the <a href="https://github.com/rmichaelthomas/atshare/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
+    </p>
+  </div>
+</footer>
 
-    <div class="dev-only">
-      <h2>Preference System</h2>
-      <p><strong>Local layer:</strong> Every share action writes to <code>localStorage</code> key <code>atshare.preference</code> with <code>{ primaryNetwork, networks[] }</code>. Automatic, no sign-in required.</p>
-      <p><strong>AT Protocol layer:</strong> OAuth sign-in writes a <code>social.atshare.preference</code> record to the user's PDS at rkey <code>self</code>. Any site embedding atShare can read it back via public <code>getRecord</code>.</p>
-      <p><strong>Cross-origin:</strong> Authenticated API calls route through a hidden iframe proxy on atshare.social via <code>postMessage</code>, avoiding third-party cookie restrictions. The OAuth popup sends the session token back to the embedding page via <code>postMessage</code>; the server accepts Bearer tokens alongside cookies.</p>
-    </div>
-  </section>
+<!-- Component -->
+<script type="module" src="/dist/atshare-selector.js"></script>
 
-  <!-- Footer -->
-  <footer>
-    <a href="https://github.com/rmichaelthomas/atshare" target="_blank" rel="noopener">GitHub</a>
-    <span style="color:#e2e8f0;">|</span>
-    <a href="/demo/">Demo</a>
-    <span style="color:#e2e8f0;">|</span>
-    <span style="color:#94a3b8;">MIT License</span>
-  </footer>
+<script>
+  // Nav scroll state
+  const nav = document.getElementById('nav');
+  const handleScroll = () => nav.classList.toggle('scrolled', window.scrollY > 10);
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll();
 
-  <!-- Component -->
-  <script type="module" src="/dist/atshare-selector.js"></script>
-
-  <!-- Mode switcher + copy buttons -->
-  <script>
-    // Mode switcher
-    const body = document.body;
-    const buttons = document.querySelectorAll('.mode-btn');
-    const saved = localStorage.getItem('atshare.landing-mode');
-    if (saved === 'dev' || saved === 'plain') {
-      body.dataset.mode = saved;
-      buttons.forEach(b => {
-        const isActive = b.dataset.mode === saved;
-        b.classList.toggle('active', isActive);
-        b.setAttribute('aria-selected', isActive);
-      });
-    }
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const mode = btn.dataset.mode;
-        body.dataset.mode = mode;
-        buttons.forEach(b => {
-          const isActive = b.dataset.mode === mode;
-          b.classList.toggle('active', isActive);
-          b.setAttribute('aria-selected', isActive);
-        });
-        try { localStorage.setItem('atshare.landing-mode', mode); } catch {}
-      });
+  // Scroll reveal
+  const ro = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        ro.unobserve(e.target);
+      }
     });
+  }, { threshold: 0.12, rootMargin: '0px 0px -32px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
 
-    // Copy buttons
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const code = btn.closest('.code-wrap').querySelector('code');
-        navigator.clipboard.writeText(code.textContent).then(() => {
-          btn.textContent = 'Copied!';
-          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-        });
-      });
+  // Copy button
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.closest('.code-block').querySelector('code');
+      navigator.clipboard.writeText(code.innerText || code.textContent).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.color = 'var(--seafoam)';
+        setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1800);
+      }).catch(() => {});
     });
-  </script>
+  });
+</script>
+
 </body>
 </html>

@@ -3,73 +3,489 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>atShare — Share Selector Demo</title>
+  <title>atShare — Demo</title>
+  <meta name="description" content="Try atShare — the universal share selector for the open social web. See it in action with different themes and configurations.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#0E0E1A">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&family=Albert+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --seafoam:     #64DFDF;
+      --seafoam-200: #89E5E5;
+      --seafoam-600: #3DBFBF;
+      --seafoam-800: #2A8F8F;
+      --ink:         #1A1A2E;
+      --ink-600:     #2D2D42;
+      --ink-850:     #131322;
+      --ink-900:     #0E0E1A;
+      --n100: #E8E8EC;
+      --n200: #B0B0BC;
+      --n300: #8A8A9A;
+      --n400: #55556A;
+      --border:        rgba(100, 223, 223, 0.10);
+      --border-strong: rgba(100, 223, 223, 0.18);
+      --font-display: 'Urbanist', sans-serif;
+      --font-body:    'Albert Sans', sans-serif;
+      --font-mono:    'SF Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+    }
+
     body {
-      font-family: system-ui, sans-serif;
-      max-width: 680px;
-      margin: 60px auto;
-      padding: 0 20px;
-      color: #0f172a;
+      background: var(--ink-900);
+      color: var(--n100);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
-    h1 { font-size: 1.5rem; margin-bottom: 4px; }
-    p { color: #475569; font-size: 14px; margin-top: 4px; }
 
-    .demo-card {
-      margin-top: 40px;
-      padding: 24px;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 32px;
     }
-    .demo-card h2 { font-size: 1rem; margin: 0 0 12px; }
+    @media (max-width: 640px) { .wrap { padding: 0 20px; } }
 
-    .theme-row {
+    /* Nav */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 0;
+    }
+    .nav-inner {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 20px;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .wordmark {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--n100);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+    .wordmark .at { color: var(--seafoam); }
+    .back-link {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--n400);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .back-link:hover { color: var(--seafoam); background: rgba(100,223,223,0.06); }
+
+    /* Header */
+    .page-header {
+      padding: 56px 0 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-eyebrow {
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--seafoam);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .page-h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(28px, 4vw, 36px);
+      letter-spacing: -0.02em;
+      color: var(--n100);
+      margin-bottom: 12px;
+    }
+    .page-desc {
+      font-family: var(--font-body);
+      font-size: 15px;
+      color: var(--n300);
+      max-width: 500px;
+      line-height: 1.65;
     }
 
-    /* Custom theme example */
-    .dark-theme atshare-selector {
-      --atshare-bg: #1e293b;
-      --atshare-bg-hover: #334155;
-      --atshare-color: #f8fafc;
-      --atshare-border: #334155;
+    /* Demo sections */
+    .demos {
+      padding: 56px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .demo-block {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .demo-meta {
+      padding: 20px 24px 0;
+    }
+    .demo-label {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--n100);
+      margin-bottom: 4px;
+    }
+    .demo-note {
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--n400);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .demo-stage {
+      padding: 32px 24px;
+      display: flex;
+      align-items: flex-start;
+      background: var(--ink-850);
+      border-top: 1px solid var(--border);
+    }
+    .demo-stage.light {
+      background: #f5f5f7;
+    }
+    .demo-stage.custom-bg {
+      background: #0a0a14;
+    }
+
+    /* Code snippet under demo */
+    .demo-code {
+      border-top: 1px solid var(--border);
+      background: var(--ink-900);
+    }
+    .demo-code pre {
+      padding: 16px 24px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: var(--n300);
+    }
+    .t-tag  { color: var(--n300); }
+    .t-attr { color: var(--seafoam); }
+    .t-str  { color: #B0EDED; }
+    .t-cmt  { color: var(--n400); font-style: italic; }
+
+    /* Default theme component */
+    .demo-stage.light atshare-selector {
+      /* uses component defaults */
+    }
+
+    /* Dark theme component */
+    .dark-demo atshare-selector {
+      --atshare-bg: #1c1c30;
+      --atshare-bg-hover: #242438;
+      --atshare-color: #E8E8EC;
+      --atshare-border: rgba(100, 223, 223, 0.14);
       --atshare-accent: #64DFDF;
+      --atshare-accent-text: #0E0E1A;
+    }
+
+    /* Custom themed component */
+    .purple-demo atshare-selector {
+      --atshare-accent: #a78bfa;
+      --atshare-accent-text: #1a0a2e;
+      --atshare-bg: #ffffff;
+      --atshare-bg-hover: #f5f3ff;
+      --atshare-color: #1a0a2e;
+      --atshare-border: #e9d5ff;
+      --atshare-radius: 20px;
+    }
+
+    /* Theming reference */
+    .reference {
+      padding: 56px 0;
+      border-top: 1px solid var(--border);
+    }
+    .ref-h {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--n100);
+      margin-bottom: 4px;
+    }
+    .ref-sub {
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--n400);
+      margin-bottom: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-strong);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--n400);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--n300);
+      vertical-align: top;
+    }
+    td:first-child { font-family: var(--font-mono); font-size: 12px; color: var(--seafoam); }
+    td code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(100,223,223,0.07);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--n200);
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-copy {
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--n400);
+    }
+    .footer-copy a {
+      color: var(--n400);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-copy a:hover { color: var(--seafoam); }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .footer-link {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--n400);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .footer-link:hover { color: var(--seafoam); background: rgba(100,223,223,0.06); }
+    .footer-sep { color: var(--ink-600); font-size: 12px; padding: 0 2px; }
+
+    :focus-visible {
+      outline: 2px solid var(--seafoam);
+      outline-offset: 3px;
+      border-radius: 4px;
     }
   </style>
-
 </head>
 <body>
-  <h1>atShare</h1>
-  <p>Universal open social share selector — demo</p>
 
-  <div class="demo-card">
-    <h2>Default</h2>
-    <atshare-selector
-      url="https://atshare.social"
-      text="Check out atShare — a universal share selector for AT Protocol and ActivityPub:">
-    </atshare-selector>
+<nav>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="/" class="wordmark" aria-label="atShare — home">
+        <span class="at">@</span>Share
+      </a>
+      <a href="/" class="back-link" aria-label="Back to atshare.social">
+        ← atshare.social
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="page-header">
+  <div class="wrap">
+    <p class="page-eyebrow">Component demo</p>
+    <h1 class="page-h1">See atShare in action.</h1>
+    <p class="page-desc">The same component, configured three ways. Click any button to open the share selector and try it live.</p>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="demos">
+
+      <!-- Default -->
+      <div class="demo-block">
+        <div class="demo-meta">
+          <p class="demo-label">Default</p>
+          <p class="demo-note">Out of the box, no theme overrides. Inherits cleanly into light-background pages.</p>
+        </div>
+        <div class="demo-stage light">
+          <atshare-selector
+            url="https://atshare.social"
+            text="Check out atShare — a universal share selector for the open social web:">
+          </atshare-selector>
+        </div>
+        <div class="demo-code">
+          <pre><code><span class="t-tag">&lt;atshare-selector</span>
+  <span class="t-attr">url</span>=<span class="t-str">"https://yoursite.com/post"</span>
+  <span class="t-attr">text</span>=<span class="t-str">"Check this out:"</span><span class="t-tag">&gt;
+&lt;/atshare-selector&gt;</span></code></pre>
+        </div>
+      </div>
+
+      <!-- Dark -->
+      <div class="demo-block">
+        <div class="demo-meta">
+          <p class="demo-label">Dark theme</p>
+          <p class="demo-note">CSS custom properties applied for dark-background pages. Uses the atShare brand palette.</p>
+        </div>
+        <div class="demo-stage dark-demo">
+          <atshare-selector
+            url="https://atshare.social"
+            text="Check out atShare — a universal share selector for the open social web:">
+          </atshare-selector>
+        </div>
+        <div class="demo-code">
+          <pre><code><span class="t-cmt">/* Dark theme */</span>
+<span class="t-attr">atshare-selector</span> {
+  <span class="t-attr">--atshare-bg</span>: <span class="t-str">#1c1c30</span>;
+  <span class="t-attr">--atshare-bg-hover</span>: <span class="t-str">#242438</span>;
+  <span class="t-attr">--atshare-color</span>: <span class="t-str">#E8E8EC</span>;
+  <span class="t-attr">--atshare-border</span>: <span class="t-str">rgba(100, 223, 223, 0.14)</span>;
+  <span class="t-attr">--atshare-accent</span>: <span class="t-str">#64DFDF</span>;
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- Custom brand -->
+      <div class="demo-block">
+        <div class="demo-meta">
+          <p class="demo-label">Custom brand</p>
+          <p class="demo-note">Every visual property is overridable. This example uses a different accent color and pill radius.</p>
+        </div>
+        <div class="demo-stage custom-bg purple-demo" style="background:#f5f3ff;">
+          <atshare-selector
+            url="https://atshare.social"
+            label="Share this post">
+          </atshare-selector>
+        </div>
+        <div class="demo-code">
+          <pre><code><span class="t-cmt">/* Custom brand theme */</span>
+<span class="t-attr">atshare-selector</span> {
+  <span class="t-attr">--atshare-accent</span>: <span class="t-str">#a78bfa</span>;
+  <span class="t-attr">--atshare-accent-text</span>: <span class="t-str">#1a0a2e</span>;
+  <span class="t-attr">--atshare-radius</span>: <span class="t-str">20px</span>;
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
   </div>
 
-  <div class="demo-card">
-    <h2>Custom label</h2>
-    <atshare-selector
-      url="https://atshare.social"
-      label="Share this post">
-    </atshare-selector>
-  </div>
+  <!-- Theming reference -->
+  <section class="reference">
+    <div class="wrap">
+      <h2 class="ref-h">CSS custom properties</h2>
+      <p class="ref-sub">All properties are scoped to the component's shadow DOM and can be set on any ancestor element.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>--atshare-bg</td>
+            <td><code>#ffffff</code></td>
+            <td>Button and popover background</td>
+          </tr>
+          <tr>
+            <td>--atshare-bg-hover</td>
+            <td><code>#f8fafc</code></td>
+            <td>Row hover background</td>
+          </tr>
+          <tr>
+            <td>--atshare-color</td>
+            <td><code>#0f172a</code></td>
+            <td>Primary text color</td>
+          </tr>
+          <tr>
+            <td>--atshare-border</td>
+            <td><code>#e2e8f0</code></td>
+            <td>Border and divider color</td>
+          </tr>
+          <tr>
+            <td>--atshare-accent</td>
+            <td><code>#64DFDF</code></td>
+            <td>Accent color — orbit symbols, sign-in button, @ panel</td>
+          </tr>
+          <tr>
+            <td>--atshare-accent-text</td>
+            <td><code>#1A1A2E</code></td>
+            <td>Text color on accent backgrounds</td>
+          </tr>
+          <tr>
+            <td>--atshare-radius</td>
+            <td><code>10px</code></td>
+            <td>Border radius for button and popover</td>
+          </tr>
+          <tr>
+            <td>--atshare-font-size</td>
+            <td><code>14px</code></td>
+            <td>Base font size</td>
+          </tr>
+          <tr>
+            <td>--atshare-orbit</td>
+            <td><code>1</code></td>
+            <td>Set to <code>0</code> to disable the orbit animation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
 
-  <div class="demo-card dark-theme" style="background:#0f172a;">
-    <h2 style="color:#f8fafc;">Custom theme (dark)</h2>
-    <atshare-selector
-      url="https://atshare.social"
-      text="Dark theme example">
-    </atshare-selector>
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <p class="footer-copy">
+        © 2026 atShare contributors. Released under the
+        <a href="https://github.com/rmichaelthomas/atshare/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
+      </p>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="https://github.com/rmichaelthomas/atshare" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="https://www.npmjs.com/package/@atshare/selector" class="footer-link" target="_blank" rel="noopener noreferrer">npm</a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="/" class="footer-link">atshare.social</a>
+      </nav>
+    </div>
   </div>
+</footer>
 
-  <script type="module" src="/dist/atshare-selector.js"></script>
+<script type="module" src="/dist/atshare-selector.js"></script>
+
 </body>
 </html>
