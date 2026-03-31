@@ -1,42 +1,90 @@
-# atShare
+# @Share
 
-Universal share selector for the open social web. Drop a single web component onto any page and give your readers one-click sharing to Bluesky (and other [AT Protocol](https://atproto.com) clients), Mastodon (and the [Fediverse](https://activitypub.rocks)), LinkedIn, X, Threads, and more — with a clipboard fallback for everything else.
+[![npm version](https://img.shields.io/npm/v/@atshare/selector?style=flat&color=64DFDF)](https://www.npmjs.com/package/@atshare/selector)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/@atshare/selector?style=flat&color=64DFDF&label=size)](https://bundlephobia.com/package/@atshare/selector)
+[![zero dependencies](https://img.shields.io/badge/dependencies-0-64DFDF?style=flat)](https://github.com/rmichaelthomas/atshare)
+[![License: MIT](https://img.shields.io/badge/License-MIT-64DFDF.svg?style=flat)](https://github.com/rmichaelthomas/atshare/blob/main/LICENSE)
 
-**[atshare.social](https://atshare.social)** | **[Live demo](https://atshare.social/demo/)**
+**One button to reach them all.**
 
-## Quick Start
+A share button that lets people pick their network — and remembers their choice across every site.
+
+<!-- DEMO GIF PLACEHOLDER
+Add an animated GIF here showing:
+1. The trigger button in its default state (with orbiting @ symbols)
+2. Hover state (Seafoam fill wash, @ panel slides in, label swaps to "atShare")
+3. Click → selector popover appears with network options
+4. User picks a network → share intent opens
+
+This single GIF is worth more than any amount of text for star conversion.
+Recommended tools: ScreenToGif, Gifski, or vhs (terminal recorder).
+Target size: 640px wide, ~5 seconds, looping.
+-->
+
+---
+
+## Install
 
 ```html
-<atshare-selector
-  url="https://yoursite.com/post/123"
-  text="Check this out:">
-</atshare-selector>
-
-<script type="module" src="https://atshare.social/dist/atshare-selector.js"></script>
+<script src="https://atshare.social/selector.js"></script>
+<atshare-selector></atshare-selector>
 ```
+
+That's it. Two lines. The selector reads the user's `social.atshare.preference` record from their PDS to pre-select their preferred destination.
+
+---
+
+## The Problem
+
+Every "Share to Bluesky" button on the web hardcodes `bsky.app` as the destination. If your audience is on Blacksky, deck.blue, or any other AT Protocol client, the button doesn't work for them. Same problem on the Fediverse — "Share to Mastodon" assumes a single instance.
+
+atShare fixes this.
+
+---
+
+## How It Works
+
+1. **Embed** — Add `<atshare-selector>` to your page
+2. **Click** — Your audience clicks the share button
+3. **Pick** — They choose their network from the selector
+4. **Remember** — Their preference is saved to their own PDS
+5. **Everywhere** — The next site running atShare already knows their choice
+
+---
 
 ## Features
 
-- **Zero dependencies in the embed** -- a single `<script>` tag, no framework required
-- **Universal destinations** -- ATProto clients (Bluesky, deck.blue, Skeet, Kite, Langit), Fediverse (Mastodon, Misskey), traditional networks (LinkedIn, X, Threads), and clipboard
-- **Community-contributed** -- destinations defined in a JSON registry that anyone can extend via PR
-- **Client choice** -- ATProto users pick their preferred client (not just bsky.app); Fediverse users pick their instance
-- **Preference memory** -- share once and your preferred destination is remembered locally; sign in with your ATProto handle to sync across every site running atShare
-- **Themeable** -- CSS custom properties for colors, borders, radius, font size
-- **Shadow DOM** -- styles don't leak in or out
-- **Lightweight** -- ~11 KB gzipped (ES module)
+**Every network, one button.**
+Bluesky, Blacksky, Mastodon, LinkedIn, and more — your audience picks their destination from a single, clean selector.
 
-## Attributes
+**Preferences that follow.**
+When someone authenticates, their preferred network is stored on their own PDS — not your site. Protocol-native and portable.
 
-| Attribute | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `url` | yes | current page URL | The URL to share |
-| `text` | no | -- | Text prepended to the URL in the share |
-| `label` | no | `"Share"` | Button label |
+**One script tag. Done.**
+A single web component with zero dependencies. Themeable to match your site. Works everywhere HTML works.
+
+**Open source. Community-built.**
+atShare composes existing open infrastructure — Microcosm for identity resolution, AT Protocol for preference storage. No tracking, no vendor lock-in, no accounts on our end. Built in the open, for the open web.
+
+---
 
 ## Theming
 
-Style with CSS custom properties on the element or a parent:
+atShare uses CSS custom properties for theming. Override them to match your site:
+
+```css
+atshare-selector {
+  --atshare-accent: #64DFDF;        /* primary accent color */
+  --atshare-accent-text: #1A1A2E;   /* text rendered on accent backgrounds */
+  --atshare-bg: #ffffff;            /* popover/component background */
+  --atshare-color: #0f172a;         /* primary text color */
+  --atshare-border: #e2e8f0;        /* border color */
+  --atshare-radius: 10px;           /* border radius */
+  --atshare-muted: #6b7280;         /* secondary/muted text */
+}
+```
+
+Dark mode example:
 
 ```css
 atshare-selector {
@@ -44,62 +92,108 @@ atshare-selector {
   --atshare-bg-hover: #334155;
   --atshare-color: #f8fafc;
   --atshare-border: #334155;
-  --atshare-accent: #64DFDF;
-  --atshare-accent-text: #1A1A2E;
-  --atshare-orbit: 1;
-  --atshare-radius: 10px;
-  --atshare-font-size: 16px;
+  --atshare-muted: #94a3b8;
 }
 ```
 
-## How Preferences Work
+---
 
-atShare remembers a user's preferred destination across every site that embeds it -- no account on your site required.
+## Configuration
 
-**Local (automatic):** When a user shares, their chosen destination (including specific ATProto client) is saved in `localStorage`. On return visits, that destination gets a checkmark and one-click access.
+```html
+<!-- Basic -->
+<atshare-selector></atshare-selector>
 
-**Cross-site (sign in):** Users click "Sign in" in the selector, enter their ATProto handle, and complete a one-time OAuth flow via popup. This writes a `social.atshare.preference` record to their PDS. Any site running atShare can read it back -- the preference follows the user across the web.
+<!-- Custom label -->
+<atshare-selector label="Share this"></atshare-selector>
 
-**Cross-origin architecture:** The component uses a hidden iframe proxy on atshare.social to relay authenticated API calls via `postMessage`. This avoids third-party cookie restrictions -- the iframe makes same-origin requests while the OAuth popup sends the session token back to the embedding page via `postMessage`.
-
-## Development
-
-```bash
-git clone https://github.com/rmichaelthomas/atshare.git
-cd atshare
-npm install
-npm run dev        # Vite dev server at localhost:5173
-npm test           # Vitest
-npm run build      # Library build (ES + UMD)
-npm run build:demo # Demo site build (bundles all deps)
+<!-- Specify content to share -->
+<atshare-selector
+  url="https://example.com/my-post"
+  text="Check out this post">
+</atshare-selector>
 ```
 
-## Project Structure
+| Attribute | Description | Default |
+|-----------|-------------|---------|
+| `label` | Button text (default state) | "Share" |
+| `url` | URL to share | Current page URL |
+| `text` | Pre-filled share text | Page title |
 
+---
+
+## Adding a Network
+
+The destination list lives in `destinations.json`. Want to add your AT Protocol client, Fediverse instance type, or traditional network? Open a PR.
+
+```json
+{
+  "id": "your-network",
+  "name": "Your Network",
+  "type": "atproto",
+  "intentUrl": "https://your-app.example/intent/compose?text={text}",
+  "icon": "your-network-icon",
+  "color": "#HEXCOLOR"
+}
 ```
-destinations.json         Community-contributed destination registry
-destinations.schema.json  JSON Schema for registry validation
-src/
-  atshare-selector.js     Web component (selector UI, preference, auth)
-  destinations.js         Registry lookup, URL building, preference resolution
-  icons/                  SVG brand icons (bluesky, mastodon, linkedin, x, threads)
-  identity.js             Handle/DID/PDS resolution
-  pds.js                  Preference record read/write (public)
-  auth-proxy.js           Server-backed OAuth proxy client
-  iframe-proxy.js         Cross-origin iframe proxy (postMessage relay)
-tests/
-  destinations.test.js    Destinations module tests
-  preference-migration.test.js  Preference migration tests
-public/
-  proxy/index.html        Iframe proxy page hosted on atshare.social
-index.html                Landing page (atshare.social root)
-server/
-  index.js                Hono API server
-  oauth.js                NodeOAuthClient singleton
-  routes/auth.js          OAuth login/callback/session/logout
-  routes/preference.js    Preference read/write via PDS
+
+The ecosystem decides what atShare supports, not us. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
+## Infrastructure
+
+atShare runs on [Microcosm](https://microcosm.blue) for identity resolution — community-maintained AT Protocol infrastructure, not Bluesky's AppView. That's a deliberate choice. We're building for the protocol, not for one company's platform.
+
+| Dependency | Purpose |
+|------------|---------|
+| [Microcosm Slingshot](https://microcosm.blue) | Handle → DID → PDS resolution |
+| User's PDS | Preference record storage (`social.atshare.preference`) |
+| AT Protocol OAuth | Authentication for preference read/write |
+
+---
+
+## The PDS Preference Record
+
+The `social.atshare.preference` Lexicon stores a user's preferred share destination on their own PDS:
+
+```json
+{
+  "$type": "social.atshare.preference",
+  "primaryNetwork": "blacksky",
+  "networks": [
+    { "type": "atproto", "appView": "https://blacksky.app" },
+    { "type": "activitypub", "instance": "https://mastodon.social" }
+  ]
+}
 ```
+
+This is the innovation. The preference lives on the user's server, not yours. It follows them across every site running atShare.
+
+---
+
+## Contributing
+
+atShare is open source and community-built. Contributions welcome:
+
+- **Add a network** — PR to `destinations.json` (easiest contribution path)
+- **Report bugs** — [Open an issue](../../issues/new?template=bug_report.md)
+- **Request features** — [Open an issue](../../issues/new?template=feature_request.md)
+- **Improve docs** — PRs welcome
+- **Spread the word** — Share atShare with your community
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE) — Free to use, modify, and distribute. The only requirement is including the license notice.
+
+---
+
+<p align="center">
+  <strong>@Share</strong><br>
+  <em>This is assembly, not invention.</em><br>
+  <a href="https://atshare.social">atshare.social</a>
+</p>

@@ -1,79 +1,87 @@
 # Contributing to atShare
 
-Thanks for helping grow atShare's destination list. The most common contribution is adding a new share target — a client app for an existing protocol or a brand new protocol group.
+Welcome! atShare is an open source project built for the open social web, and contributions of all kinds are genuinely appreciated — whether you're adding a network, fixing a bug, or improving the docs.
 
-## Adding a new destination
+This guide is short on purpose. If something isn't covered here, use your best judgment and open a PR.
 
-Edit `destinations.json`. Each protocol group has a `clients` array; add your entry there (or create a new protocol object if the protocol isn't represented yet).
+---
 
-Optionally, drop an icon in `src/icons/` and reference it in the `icon` field.
+## Ways to Contribute
 
-Open a PR. The CI workflow will validate your entry automatically.
+### Add a Network (Easiest Path)
 
-## Client field reference
-
-| Field | Required | Description |
-|---|---|---|
-| `id` | Yes | Unique kebab-case identifier, e.g. `my-client`. Must not duplicate any existing id. |
-| `name` | Yes | Human-readable display name, e.g. `My Client`. |
-| `intentUrl` | Yes | Share URL template. Must start with `https://` or `{instance}` (for instance-based protocols). See template variables below. |
-| `domain` | No | Root domain of the service, e.g. `example.com`. Used for domain validation in CI and for display. Required when `intentUrl` starts with `https://`. |
-| `icon` | No | Filename of an SVG icon in `src/icons/`, e.g. `my-client.svg`. See icon requirements below. |
-| `requiresInstance` | No | Set to `true` if the user must supply a server URL (Mastodon-style). Omit otherwise. |
-| `default` | No | Set to `true` to pre-select this client in its protocol group. At most one per group. |
-
-## Template variables
-
-These placeholders are replaced at share time with values from the page being shared.
-
-| Variable | Resolves to |
-|---|---|
-| `{text}` | Composed share text (may include title + URL, depending on what the page provides) |
-| `{url}` | Canonical URL of the page |
-| `{title}` | Page title |
-| `{instance}` | User-supplied instance URL (only meaningful when `requiresInstance: true`) |
-
-URL-encode values as needed; most intent URLs accept pre-encoded query parameters.
-
-## Icon requirements
-
-- Format: SVG only. No PNG, WebP, or other raster formats.
-- ViewBox: square (`0 0 N N`). Recommended size: `0 0 24 24` or `0 0 32 32`.
-- Paths: single-color, filled shapes. The UI recolors icons at runtime using `currentColor` or CSS `fill`, so icons that rely on embedded colors will look wrong.
-- No `fill` attribute on path elements. Use `fill="currentColor"` on the root `<svg>` if needed, or omit fill entirely.
-- No embedded fonts or raster images inside the SVG.
-- Keep file size small — strip editor metadata before committing.
-
-## What gets rejected
-
-PRs will be closed or asked to revise if they include:
-
-- Non-HTTPS `intentUrl` (exception: `{instance}`-prefixed URLs for federated protocols)
-- URLs that are dead or redirect to a homepage rather than a share intent
-- Spam, SEO link farms, or non-social-sharing destinations
-- Duplicate `id` values
-- Icons that are not SVG, contain raster embeds, or carry licensing restrictions
-
-## Example PR: adding an ATProto client
-
-Say you want to add a hypothetical client called **SkyPost** at `skypost.app`.
-
-1. Add an entry to the `atproto` clients array in `destinations.json`:
+The community JSON registry is the most accessible way to contribute. If a network isn't in the selector, open a PR to `destinations.json`:
 
 ```json
 {
-  "id": "skypost",
-  "name": "SkyPost",
-  "domain": "skypost.app",
-  "intentUrl": "https://skypost.app/intent/compose?text={text}",
-  "icon": "skypost.svg"
+  "id": "your-network",
+  "name": "Your Network",
+  "type": "atproto",
+  "intentUrl": "https://your-app.example/intent/compose?text={text}&url={url}",
+  "icon": "your-network-icon",
+  "color": "#HEXCOLOR"
 }
 ```
 
-2. Add `src/icons/skypost.svg` — a clean, square SVG with no fill attributes on paths.
+Fields:
+- `type`: `atproto`, `activitypub`, or `web`
+- `intentUrl`: supports `{text}`, `{url}`, `{title}`, and `{instance}` (for Fediverse)
+- `icon`: match an existing icon name in `src/icons/` or include an SVG path in the PR
 
-3. Commit and open a PR with a brief description of the client. CI will validate the schema, check the icon file exists, and confirm the domain matches the URL. If everything passes, the PR is good to merge.
+You can also [open an issue](../../issues/new?template=new_destination.md) to request a network and let someone else implement it.
 
-## Questions?
+### Report a Bug
 
-Open an issue or start a discussion. We're happy to help.
+[Open a bug report](../../issues/new?template=bug_report.md) with what you expected, what happened, and your browser/OS/version.
+
+### Request a Feature
+
+[Open a feature request](../../issues/new?template=feature_request.md). Describe the use case, not just the solution.
+
+### Improve Documentation
+
+Typo, outdated example, unclear explanation — PRs for docs are always welcome, no issue needed.
+
+### Code Contributions
+
+For anything beyond a small bug fix, open an issue first so we can discuss the approach before you spend time on it.
+
+---
+
+## Development Setup
+
+```bash
+git clone https://github.com/rmichaelthomas/atshare.git
+cd atshare
+npm install
+npm run dev      # dev server at http://localhost:5173
+npm test         # run tests
+npm run build    # build dist/
+```
+
+The demo page at `/demo/index.html` is the primary development surface for the selector component.
+
+---
+
+## Architecture Notes
+
+atShare runs on [Microcosm](https://microcosm.blue) for identity resolution — community-maintained AT Protocol infrastructure, not Bluesky's AppView. Authentication uses AT Protocol OAuth, and preferences are stored as `social.atshare.preference` records on the user's own PDS. Understanding this flow helps when contributing to anything in the auth or identity path.
+
+---
+
+## PR Process
+
+1. Fork the repo and create a branch (`feature/my-thing` or `fix/my-bug`)
+2. Make your changes and add tests if applicable
+3. Run `npm test` to make sure everything passes
+4. Open a PR with a clear description of what it does and why
+
+---
+
+## Code Style
+
+Keep functions small and avoid introducing new dependencies — the zero-dependency policy for the web component is intentional.
+
+---
+
+atShare grows with the ecosystem, not ahead of it. Your contribution makes the open social web a little more connected.
