@@ -428,6 +428,35 @@ TEMPLATE.innerHTML = `
       margin: 6px 0;
     }
 
+    /* --- Shared input + action button (mastodon + signin) --- */
+    .popover-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--atshare-border, #e2e8f0);
+      border-radius: 6px;
+      font-size: 13px;
+      box-sizing: border-box;
+      background: var(--atshare-bg, #ffffff);
+      color: var(--atshare-color, #0f172a);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .popover-input:focus {
+      border-color: var(--atshare-accent, #64DFDF);
+      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
+    }
+    .popover-action-btn {
+      align-self: flex-end;
+      padding: 5px 12px;
+      border: none;
+      border-radius: 6px;
+      background: var(--atshare-accent, #64DFDF);
+      color: var(--atshare-accent-text, #1A1A2E);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
     /* --- Mastodon instance input --- */
     .mastodon-input-wrap {
       display: none;
@@ -442,33 +471,7 @@ TEMPLATE.innerHTML = `
       font-size: 12px;
       color: var(--_muted);
     }
-    .mastodon-input-wrap input {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: 6px;
-      font-size: 13px;
-      box-sizing: border-box;
-      background: var(--atshare-bg, #ffffff);
-      color: var(--atshare-color, #0f172a);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .mastodon-input-wrap input:focus {
-      border-color: var(--atshare-accent, #64DFDF);
-      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
-    }
-    .mastodon-input-wrap button {
-      align-self: flex-end;
-      padding: 5px 12px;
-      border: none;
-      border-radius: 6px;
-      background: var(--atshare-accent, #64DFDF);
-      color: var(--atshare-accent-text, #1A1A2E);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    .mastodon-input-wrap input { width: 100%; }
 
     /* --- Footer --- */
     .footer {
@@ -511,22 +514,7 @@ TEMPLATE.innerHTML = `
       font-size: 12px;
       color: var(--_muted);
     }
-    .signin-handle-wrap input {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: 6px;
-      font-size: 13px;
-      box-sizing: border-box;
-      background: var(--atshare-bg, #ffffff);
-      color: var(--atshare-color, #0f172a);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .signin-handle-wrap input:focus {
-      border-color: var(--atshare-accent, #64DFDF);
-      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
-    }
+    .signin-handle-wrap input { width: 100%; }
     .signin-handle-wrap input.error { border-color: #ef4444; }
     .signin-handle-wrap input.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
     .signin-handle-wrap .signin-error {
@@ -539,16 +527,6 @@ TEMPLATE.innerHTML = `
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-    .signin-btn {
-      padding: 5px 12px;
-      border: none;
-      border-radius: 6px;
-      background: var(--atshare-accent, #64DFDF);
-      color: var(--atshare-accent-text, #1A1A2E);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
     }
     .signin-input-cancel-btn {
       font-size: 12px;
@@ -638,8 +616,8 @@ TEMPLATE.innerHTML = `
         <div class="network-list"></div>
         <div class="mastodon-input-wrap">
           <label>Your Mastodon instance</label>
-          <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input">
-          <button class="mastodon-go-btn">Share</button>
+          <input type="url" placeholder="https://mastodon.social" class="mastodon-instance-input popover-input">
+          <button class="mastodon-go-btn popover-action-btn">Share</button>
         </div>
         <button class="more-link">More destinations</button>
       </div>
@@ -649,10 +627,10 @@ TEMPLATE.innerHTML = `
 
         <div class="signin-handle-wrap">
           <label>Your ATProto handle</label>
-          <input type="text" class="signin-handle-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
+          <input type="text" class="signin-handle-input popover-input" placeholder="your-handle.bsky.social" autocomplete="username" spellcheck="false">
           <span class="signin-error"></span>
           <div class="signin-handle-actions">
-            <button class="signin-btn">Sign in</button>
+            <button class="signin-btn popover-action-btn">Sign in</button>
             <button class="signin-input-cancel-btn">Cancel</button>
           </div>
         </div>
@@ -717,8 +695,7 @@ class AtshareSelector extends HTMLElement {
     this.shadowRoot.appendChild(TEMPLATE.content.cloneNode(true));
 
     this._open = false;
-    this._authenticated = false; // true when signed in via OAuth proxy
-    this._authPopup = null;      // reference to the OAuth popup window
+    this._authPopup = null; // reference to the OAuth popup window
 
     // UI state for popover views
     this._expandedProtocol = null;        // null or protocol ID string
@@ -799,7 +776,7 @@ class AtshareSelector extends HTMLElement {
     try {
       const { did } = await checkSession();
       if (!did) return;
-      this._authenticated = true;
+
       const handle = localStorage.getItem('atshare.handle');
       if (handle) {
         this._setSigninState('signedin', { handle });
@@ -842,13 +819,14 @@ class AtshareSelector extends HTMLElement {
   }
 
   attributeChangedCallback(name, _old, value) {
-    if (name === 'label') {
-      const label = value || 'Share';
-      const defaultSpan = this.shadowRoot.querySelector('.label-default');
-      const hoverSpan = this.shadowRoot.querySelector('.label-hover');
-      if (defaultSpan) defaultSpan.textContent = label;
-      if (hoverSpan) hoverSpan.textContent = (label === 'Share') ? 'atShare' : label;
-    }
+    if (name === 'label') this._updateLabel(value || 'Share');
+  }
+
+  _updateLabel(label) {
+    const defaultSpan = this.shadowRoot.querySelector('.label-default');
+    const hoverSpan = this.shadowRoot.querySelector('.label-hover');
+    if (defaultSpan) defaultSpan.textContent = label;
+    if (hoverSpan) hoverSpan.textContent = (label === 'Share') ? 'atShare' : label;
   }
 
   get shareUrl() {
@@ -861,11 +839,7 @@ class AtshareSelector extends HTMLElement {
   }
 
   _render() {
-    const label = this.getAttribute('label') || 'Share';
-    const defaultSpan = this.shadowRoot.querySelector('.label-default');
-    const hoverSpan = this.shadowRoot.querySelector('.label-hover');
-    if (defaultSpan) defaultSpan.textContent = label;
-    if (hoverSpan) hoverSpan.textContent = (label === 'Share') ? 'atShare' : label;
+    this._updateLabel(this.getAttribute('label') || 'Share');
     this._renderNetworks();
   }
 
@@ -1339,7 +1313,7 @@ class AtshareSelector extends HTMLElement {
       await handleAuthCallback(sessionId, did);
 
       // Session established — save handle, load preference
-      this._authenticated = true;
+
       try { localStorage.setItem('atshare.handle', handle); } catch {}
       this._setSigninState('signedin', { handle });
 
@@ -1427,7 +1401,7 @@ class AtshareSelector extends HTMLElement {
    */
   async _onSignOut() {
     try { await signOut(); } catch {}
-    this._authenticated = false;
+
     try {
       localStorage.removeItem('atshare.handle');
       localStorage.removeItem('atshare.preference');

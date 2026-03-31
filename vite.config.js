@@ -39,6 +39,7 @@ const configs = {
     // Library build — zero external dependencies (auth goes through server API)
     build: {
       outDir: 'dist',
+
       lib: {
         entry: resolve(__dirname, 'src/atshare-selector.js'),
         name: 'AtshareSelector',

@@ -21,9 +21,10 @@
   <meta name="twitter:image" content="https://atshare.social/og.png">
   <meta name="theme-color" content="#0E0E1A">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800&family=Albert+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="modulepreload" href="/dist/atshare-selector.js">
 
   <style>
     /* ── Reset ── */
@@ -629,6 +630,19 @@
       background: rgba(100, 223, 223, 0.05);
     }
 
+    /* ── Inline code token ── */
+    .inline-code {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--seafoam);
+      background: rgba(100, 223, 223, 0.07);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* ── Wordmark size variant ── */
+    .wordmark--sm { font-size: 18px; }
+
     /* ── Accessibility ── */
     :focus-visible {
       outline: 2px solid var(--seafoam);
@@ -670,20 +684,20 @@
   <div class="wrap">
     <div class="hero-body">
 
-      <div class="hero-badge reveal">
+      <div class="hero-badge">
         <span class="hero-badge-dot"></span>
         Open source · Community-built
       </div>
 
-      <h1 class="hero-h1 reveal d1" id="hero-h1">
+      <h1 class="hero-h1" id="hero-h1">
         One button to reach them all.
       </h1>
 
-      <p class="hero-tagline reveal d2">
+      <p class="hero-tagline">
         A share button that lets people pick their network — and remembers their choice across every site.
       </p>
 
-      <div class="hero-ctas reveal d3">
+      <div class="hero-ctas">
         <a href="#install" class="btn btn-primary btn-lg">Get started</a>
         <a href="https://github.com/rmichaelthomas/atshare" class="btn btn-ghost btn-lg" target="_blank" rel="noopener noreferrer">View on GitHub</a>
       </div>
@@ -796,7 +810,7 @@
           Designed and built by <a href="https://blacksky.community/profile/rmichaelthomas.com" target="_blank" rel="noopener noreferrer">R. Michael Thomas</a> — an independent developer building open, portable infrastructure for the AT Protocol ecosystem. atShare is part of a small but growing collection of tools aimed at making the open social web as frictionless as the closed one.
         </p>
         <p>
-          The <code style="font-family: var(--font-mono); font-size: 14px; color: var(--seafoam); background: rgba(100,223,223,0.07); padding: 1px 6px; border-radius: 4px;">social.atshare.preference</code> lexicon record is the core innovation here — a single AT Protocol record type that stores where a person likes to share, living on their own PDS and readable by any site embedding atShare. No central registry. No account on our end. Portable by design.
+          The <code class="inline-code">social.atshare.preference</code> lexicon record is the core innovation here — a single AT Protocol record type that stores where a person likes to share, living on their own PDS and readable by any site embedding atShare. No central registry. No account on our end. Portable by design.
         </p>
         <p>
           atShare is open source and built to compose. Publishers, developers, and open-web communities are all welcome. If you ship content — articles, portfolios, projects, anything — atShare gives your readers a share button that respects where they actually live online.
@@ -827,7 +841,7 @@
   <div class="wrap">
     <div class="footer-row">
       <div class="footer-left">
-        <a href="/" class="wordmark" style="font-size: 18px;" aria-label="atShare — home">
+        <a href="/" class="wordmark wordmark--sm" aria-label="atShare — home">
           <span class="at">@</span>Share
         </a>
         <p class="footer-tagline">Open source. Community-built.</p>

@@ -1,8 +1,13 @@
+# Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
+
 # Cache-Control headers
 <IfModule mod_headers.c>
-  # JS component bundles — 1 day cache, CORS for cross-origin embedding
+  # JS component bundles — versioned path, safe for long-term caching + CORS
   <FilesMatch "\.(js|cjs)$">
-    Header set Cache-Control "public, max-age=86400"
+    Header set Cache-Control "public, max-age=31536000, immutable"
     Header set Access-Control-Allow-Origin "*"
   </FilesMatch>
 
