@@ -88,11 +88,25 @@ TEMPLATE.innerHTML = `
       }
     }
     @media (hover: none) {
-      .trigger-fill { display: none; }
-      .trigger-at { display: none; }
-      .trigger:hover { padding-left: 18px; color: var(--atshare-color, #0f172a); }
-      .trigger .label-default { display: inline !important; }
-      .trigger .label-hover { display: none !important; }
+      /* Touch devices: show the accent-filled state statically since hover never fires */
+      .trigger {
+        border-color: var(--atshare-accent, #64DFDF);
+        color: var(--atshare-accent-text, #1A1A2E);
+        padding-left: 54px;
+      }
+      .trigger-fill {
+        transform: translateX(0);
+        transition: none;
+      }
+      .trigger-at {
+        transform: translateX(0);
+        transition: none;
+      }
+      .trigger .label-default { display: none !important; }
+      .trigger .label-hover { display: inline !important; }
+      .trigger:active { filter: brightness(0.92); }
+      /* Orbit is a hover-curiosity — hide on touch */
+      .trigger-orbit { display: none; }
     }
 
     /* --- Trigger button --- */
@@ -194,6 +208,24 @@ TEMPLATE.innerHTML = `
     .popover.open {
       display: block;
     }
+    /* Backdrop overlay for bottom-sheet on narrow screens */
+    .backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 9998;
+      animation: atshare-fade-in 0.2s ease;
+    }
+    .backdrop.open { display: block; }
+    @media (min-width: 401px) {
+      .backdrop { display: none !important; }
+    }
+    @keyframes atshare-fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
     /* Bottom-sheet on narrow screens. Note: position:fixed is relative to the viewport;
        if any ancestor uses CSS transform/filter/perspective, the fixed positioning
        will be relative to that ancestor instead (known browser limitation). */
@@ -207,7 +239,22 @@ TEMPLATE.innerHTML = `
         max-height: 80vh;
         border-radius: 14px 14px 0 0;
         margin-top: 0;
+        animation: atshare-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
       }
+      /* Drag handle indicator */
+      .popover.open::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--atshare-border, #e2e8f0);
+        margin: 10px auto 4px;
+      }
+    }
+    @keyframes atshare-sheet-up {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
     }
 
     /* --- Protocol buttons (default view) --- */
@@ -657,6 +704,7 @@ TEMPLATE.innerHTML = `
       </span>
     </button>
 
+    <div class="backdrop"></div>
     <div class="popover" role="dialog" aria-modal="true" aria-label="Share to...">
       <div class="default-view">
         <div class="network-list"></div>
@@ -750,6 +798,7 @@ class AtshareSelector extends HTMLElement {
     this._clipboardTimeout = null;
 
     this._trigger = this.shadowRoot.querySelector('.trigger');
+    this._backdrop = this.shadowRoot.querySelector('.backdrop');
     this._popover = this.shadowRoot.querySelector('.popover');
     this._defaultView = this.shadowRoot.querySelector('.default-view');
     this._networkList = this.shadowRoot.querySelector('.network-list');
@@ -788,6 +837,8 @@ class AtshareSelector extends HTMLElement {
       e.stopPropagation();
       this._togglePopover();
     });
+
+    this._backdrop.addEventListener('click', () => this._closePopover());
 
     this._mastodonGoBtn.addEventListener('click', () => this._onMastodonGo());
     this._mastodonInput.addEventListener('keydown', (e) => {
@@ -1221,6 +1272,7 @@ class AtshareSelector extends HTMLElement {
     this._defaultView.classList.remove('hidden');
     this._renderNetworks();
     this._popover.classList.add('open');
+    this._backdrop.classList.add('open');
     this._trigger.setAttribute('aria-expanded', 'true');
 
     // Viewport edge detection — flip popover to right-aligned when it would overflow the right edge.
@@ -1249,6 +1301,7 @@ class AtshareSelector extends HTMLElement {
   _closePopover() {
     this._open = false;
     this._popover.classList.remove('open');
+    this._backdrop.classList.remove('open');
     this._trigger.setAttribute('aria-expanded', 'false');
     // Guard against calling focus() on a disconnected element (e.g. host removed from DOM while popover open)
     if (this.isConnected) this._trigger.focus();
