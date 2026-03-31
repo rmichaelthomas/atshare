@@ -44,6 +44,9 @@ TEMPLATE.innerHTML = `
     :host {
       display: inline-block;
       font-family: inherit;
+      /* Muted text — overridable for dark themes */
+      --_muted: var(--atshare-muted, #94a3b8);
+      --_muted-hover: var(--atshare-muted-hover, #64748b);
     }
 
     /* --- Orbit --- */
@@ -96,7 +99,7 @@ TEMPLATE.innerHTML = `
       border-radius: var(--atshare-radius, 10px);
       background: var(--atshare-bg, #ffffff);
       color: var(--atshare-color, #0f172a);
-      font-size: var(--atshare-font-size, 16px);
+      font-size: var(--atshare-font-size, 14px);
       font-weight: 600;
       cursor: pointer;
       user-select: none;
@@ -165,18 +168,19 @@ TEMPLATE.innerHTML = `
       display: inline;
     }
 
+    /* --- Popover --- */
     .popover {
       display: none;
       position: absolute;
       z-index: 9999;
-      min-width: 220px;
-      max-width: 280px;
-      padding: 8px;
-      margin-top: 6px;
+      min-width: 224px;
+      max-width: 288px;
+      padding: 6px;
+      margin-top: 8px;
       border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: var(--atshare-radius, 6px);
+      border-radius: var(--atshare-radius, 10px);
       background: var(--atshare-bg, #ffffff);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
     }
     .popover.open {
       display: block;
@@ -190,7 +194,7 @@ TEMPLATE.innerHTML = `
       width: 100%;
       padding: 8px 10px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       color: var(--atshare-color, #0f172a);
       font-size: 14px;
@@ -226,7 +230,7 @@ TEMPLATE.innerHTML = `
     }
     .protocol-btn .proto-via {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--_muted);
       margin-left: 4px;
     }
     .protocol-btn .proto-check {
@@ -240,7 +244,7 @@ TEMPLATE.innerHTML = `
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 3px;
+      border-radius: 4px;
       flex-shrink: 0;
       cursor: pointer;
       transition: background 0.1s;
@@ -268,7 +272,7 @@ TEMPLATE.innerHTML = `
       width: 100%;
       padding: 6px 10px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       color: var(--atshare-color, #0f172a);
       font-size: 13px;
@@ -300,16 +304,16 @@ TEMPLATE.innerHTML = `
       padding: 6px 10px;
       margin-top: 2px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
-      color: #64748b;
+      color: var(--_muted);
       font-size: 12px;
       cursor: pointer;
       text-align: left;
     }
     .more-link:hover {
       background: var(--atshare-bg-hover, #f8fafc);
-      color: #475569;
+      color: var(--_muted-hover);
     }
 
     /* --- Full list view --- */
@@ -326,12 +330,12 @@ TEMPLATE.innerHTML = `
       padding: 4px 10px 8px;
       border: none;
       background: transparent;
-      color: #64748b;
+      color: var(--_muted);
       font-size: 12px;
       cursor: pointer;
     }
     .full-list .back-link:hover {
-      color: #475569;
+      color: var(--_muted-hover);
     }
     .full-list .back-link svg {
       width: 12px;
@@ -346,6 +350,7 @@ TEMPLATE.innerHTML = `
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      color: var(--_muted);
     }
     .full-list-item {
       display: flex;
@@ -354,7 +359,7 @@ TEMPLATE.innerHTML = `
       width: 100%;
       padding: 7px 10px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       color: var(--atshare-color, #0f172a);
       font-size: 13px;
@@ -401,7 +406,7 @@ TEMPLATE.innerHTML = `
       width: 100%;
       padding: 7px 10px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       color: var(--atshare-color, #0f172a);
       font-size: 13px;
@@ -435,37 +440,47 @@ TEMPLATE.innerHTML = `
     }
     .mastodon-input-wrap label {
       font-size: 12px;
-      color: #64748b;
+      color: var(--_muted);
     }
     .mastodon-input-wrap input {
       width: 100%;
       padding: 6px 8px;
       border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 13px;
       box-sizing: border-box;
+      background: var(--atshare-bg, #ffffff);
+      color: var(--atshare-color, #0f172a);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .mastodon-input-wrap input:focus {
+      border-color: var(--atshare-accent, #64DFDF);
+      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
     }
     .mastodon-input-wrap button {
       align-self: flex-end;
       padding: 5px 12px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: var(--atshare-accent, #64DFDF);
-      color: #fff;
+      color: var(--atshare-accent-text, #1A1A2E);
       font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
     }
 
+    /* --- Footer --- */
     .footer {
       padding: 4px 10px 2px;
     }
     .footer a {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--_muted);
       text-decoration: none;
     }
     .footer a:hover {
-      color: #64748b;
+      color: var(--_muted-hover);
     }
 
     /* --- Sign-in zone --- */
@@ -477,14 +492,14 @@ TEMPLATE.innerHTML = `
     .signin-link {
       display: none;
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--_muted);
       background: none;
       border: none;
       padding: 0;
       cursor: pointer;
       text-align: left;
     }
-    .signin-link:hover { color: #64748b; }
+    .signin-link:hover { color: var(--_muted-hover); }
 
     /* input: handle form */
     .signin-handle-wrap {
@@ -494,17 +509,26 @@ TEMPLATE.innerHTML = `
     }
     .signin-handle-wrap label {
       font-size: 12px;
-      color: #64748b;
+      color: var(--_muted);
     }
     .signin-handle-wrap input {
       width: 100%;
       padding: 6px 8px;
       border: 1px solid var(--atshare-border, #e2e8f0);
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 13px;
       box-sizing: border-box;
+      background: var(--atshare-bg, #ffffff);
+      color: var(--atshare-color, #0f172a);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .signin-handle-wrap input:focus {
+      border-color: var(--atshare-accent, #64DFDF);
+      box-shadow: 0 0 0 3px rgba(100, 223, 223, 0.18);
     }
     .signin-handle-wrap input.error { border-color: #ef4444; }
+    .signin-handle-wrap input.error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
     .signin-handle-wrap .signin-error {
       font-size: 11px;
       color: #ef4444;
@@ -519,21 +543,22 @@ TEMPLATE.innerHTML = `
     .signin-btn {
       padding: 5px 12px;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       background: var(--atshare-accent, #64DFDF);
-      color: #fff;
+      color: var(--atshare-accent-text, #1A1A2E);
       font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
     }
     .signin-input-cancel-btn {
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--_muted);
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
     }
-    .signin-input-cancel-btn:hover { color: #64748b; }
+    .signin-input-cancel-btn:hover { color: var(--_muted-hover); }
 
     /* waiting */
     .signin-waiting {
@@ -542,17 +567,17 @@ TEMPLATE.innerHTML = `
       justify-content: space-between;
       gap: 8px;
       font-size: 12px;
-      color: #64748b;
+      color: var(--_muted-hover);
     }
     .signin-waiting .signin-cancel-btn {
       font-size: 12px;
-      color: #94a3b8;
+      color: var(--_muted);
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
     }
-    .signin-waiting .signin-cancel-btn:hover { color: #64748b; }
+    .signin-waiting .signin-cancel-btn:hover { color: var(--_muted-hover); }
 
     /* signedin */
     .signin-info {
@@ -560,18 +585,18 @@ TEMPLATE.innerHTML = `
       align-items: center;
       justify-content: space-between;
       font-size: 12px;
-      color: #475569;
+      color: var(--_muted-hover);
     }
     .signin-info .signin-handle { font-weight: 500; }
     .signin-signout-btn {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--_muted);
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
     }
-    .signin-signout-btn:hover { color: #64748b; }
+    .signin-signout-btn:hover { color: var(--_muted-hover); }
 
     /* State visibility */
     .signin-zone.state-idle     .signin-link        { display: inline; }
