@@ -56,7 +56,10 @@
       --section-py: 112px;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px; /* clear sticky nav + breathing room */
+    }
 
     body {
       background: var(--ink-900);
@@ -604,7 +607,7 @@
       </div>
 
       <!-- Live component demo -->
-      <div class="demo-frame reveal d4" role="region" aria-label="Live atShare demo">
+      <div class="demo-frame reveal d4" id="install" role="region" aria-label="Live atShare demo">
         <span class="demo-label">Try it</span>
         <atshare-selector
           url="https://atshare.social"
@@ -613,7 +616,7 @@
       </div>
 
       <!-- Install snippet -->
-      <div class="code-block reveal d4" id="install">
+      <div class="code-block reveal d4">
         <div class="code-header">
           <div class="code-dots" aria-hidden="true">
             <i></i><i></i><i></i>
