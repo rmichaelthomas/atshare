@@ -1223,7 +1223,10 @@ class AtshareSelector extends HTMLElement {
     this._popover.classList.add('open');
     this._trigger.setAttribute('aria-expanded', 'true');
 
-    // Viewport edge detection — flip popover left-aligned when it would overflow right edge
+    // Viewport edge detection — flip popover to right-aligned when it would overflow the right edge.
+    // Uses rect.left (position in viewport) + estimated max-width; CSS `right:0` anchors to the host
+    // element's right edge via position:absolute on the popover. Skipped on mobile (<= 400px) where
+    // the bottom-sheet layout takes over.
     if (window.innerWidth > 400) {
       const rect = this._trigger.getBoundingClientRect();
       const popoverMaxWidth = 288;
@@ -1247,7 +1250,8 @@ class AtshareSelector extends HTMLElement {
     this._open = false;
     this._popover.classList.remove('open');
     this._trigger.setAttribute('aria-expanded', 'false');
-    this._trigger.focus();
+    // Guard against calling focus() on a disconnected element (e.g. host removed from DOM while popover open)
+    if (this.isConnected) this._trigger.focus();
   }
 
   _onMastodonGo() {
