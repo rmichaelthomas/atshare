@@ -35,7 +35,12 @@ export async function resolvePdsEndpoint(did) {
     (s) => s.id === '#atproto_pds' && s.type === 'AtprotoPersonalDataServer'
   );
   if (!pdsService) throw new Error(`No PDS service found for DID: ${did}`);
-  return pdsService.serviceEndpoint;
+  // Validate endpoint is a well-formed https:// URL before returning
+  const endpoint = pdsService.serviceEndpoint;
+  if (!endpoint || !/^https:\/\/[a-z0-9]/i.test(endpoint)) {
+    throw new Error(`Invalid PDS endpoint: ${endpoint}`);
+  }
+  return endpoint;
 }
 
 /**
