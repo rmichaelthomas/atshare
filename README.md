@@ -18,7 +18,7 @@ A share button that lets people pick their network — and remembers their choic
 ## Install
 
 ```html
-<script src="https://atshare.social/selector.js"></script>
+<script src="https://atshare.social/dist/atshare-selector.js" defer></script>
 <atshare-selector></atshare-selector>
 ```
 

@@ -1,3 +1,12 @@
+# Short-URL alias for the component bundle.
+# Keeps the two-line install snippet short and guards against any older
+# docs/snippets that referenced /selector.js before the /dist/ path was
+# documented. 301 so browsers cache the redirect.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^selector\.js$ /dist/atshare-selector.js [R=301,L]
+</IfModule>
+
 # Compression
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
