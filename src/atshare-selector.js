@@ -1294,7 +1294,7 @@ class AtshareSelector extends HTMLElement {
     // Move focus to first focusable element in popover
     requestAnimationFrame(() => {
       const focusable = this._popover.querySelector('button:not([disabled]), input, a[href]');
-      if (focusable) focusable.focus();
+      if (focusable) focusable.focus({ preventScroll: true });
     });
   }
 
@@ -1304,7 +1304,7 @@ class AtshareSelector extends HTMLElement {
     this._backdrop.classList.remove('open');
     this._trigger.setAttribute('aria-expanded', 'false');
     // Guard against calling focus() on a disconnected element (e.g. host removed from DOM while popover open)
-    if (this.isConnected) this._trigger.focus();
+    if (this.isConnected) this._trigger.focus({ preventScroll: true });
   }
 
   _onMastodonGo() {
@@ -1431,7 +1431,7 @@ class AtshareSelector extends HTMLElement {
         this._signinHandleInput.classList.add('error');
       }
       // Focus the input after a tick (allows CSS transition)
-      setTimeout(() => this._signinHandleInput.focus(), 0);
+      setTimeout(() => this._signinHandleInput.focus({ preventScroll: true }), 0);
     }
 
     if (state === 'signedin' && opts.handle) {
